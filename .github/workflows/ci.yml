@@ -1,0 +1,8 @@
+name: ci
+run-name: ${{ github.actor }} pushed some code
+on: [push]
+jobs:
+  check-bats-version:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./ci/run_ci.sh
