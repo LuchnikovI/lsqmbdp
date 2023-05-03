@@ -24,7 +24,7 @@ FROM ${base_image}
 
 WORKDIR /lsqmbdp
 RUN apt-get update && \
-    apt-get install -y software-properties-common curl pylint&& \
+    apt-get install -y software-properties-common curl&& \
     add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update && \
     apt install -y python3.10 python3-pip
@@ -33,6 +33,7 @@ RUN python3.10 -m pip install --upgrade pip
 RUN python3.10 -m pip install numpy
 RUN python3.10 -m pip install pytest
 RUN python3.10 -m pip install -U mypy
+RUN python3.10 -m pip install pylint
 RUN ${jax_install}
 COPY ./src ./src
 COPY ./ci/entrypoint.sh ./src/entrypoint.sh
