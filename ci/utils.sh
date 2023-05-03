@@ -8,7 +8,7 @@ export LOG_LEVELS=${LOG_LEVELS:-'DEBUG INFO WARNING ERROR'}
 export UBUNTU_VERSION=${UBUNTU_VERSION:-'20.04'}
 
 # see https://github.com/google/jax for more information
-export CUDA_VERSION=${CUDA_VERSION:-'11.4.0'}
+export CUDA_VERSION=${CUDA_VERSION:-'11.8.0'}
 export CUDNN_MAJOR_VERSION=${CUDNN_MAJOR_VERSION:-'8'}
 
 export CUDA_MAJOR_VERSION="$(echo ${CUDA_VERSION} | grep -oP "[0-9]+" | head -1)"
