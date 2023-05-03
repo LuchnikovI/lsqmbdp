@@ -5,4 +5,4 @@ jobs:
   check-bats-version:
     runs-on: ubuntu-latest
     steps:
-      - run: bash ${GITHUB_WORKSPACE}/ci/run_ci.sh
+      - run: ./ci/run_ci.sh
