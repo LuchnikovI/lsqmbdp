@@ -1,17 +1,12 @@
 """Influence matrix"""
 
 from typing import List
-from chex import dataclass
 import jax.numpy as jnp
 from jax.random import KeyArray, split
 from jaxtyping import Array, Complex64
 from utils import _gen_random_channel
 
-@dataclass
-class InfluenceMatrix:
-    """Influence matrix class"""
-    kers: List[Complex64[Array, "#bd 2 2 2 2 #bd"]]
-
+InfluenceMatrix = List[Complex64[Array, "#bd 2 2 2 2 #bd"]]
 
 def random_im(
         key: KeyArray,
@@ -50,7 +45,7 @@ def random_im(
     )
     last_ker = last_ker.trace(axis1=0, axis2=1)
     kers[0] = last_ker[jnp.newaxis]
-    return InfluenceMatrix(kers = kers)
+    return kers
 
 
 def im2phi(
@@ -62,7 +57,7 @@ def im2phi(
     Return: quantum channel"""
 
     phi = jnp.ones((1, 1, 1, 1, 1), dtype=jnp.complex64)
-    for ker in influance_matrix.kers:
+    for ker in influance_matrix:
         phi = jnp.tensordot(phi, ker, axes=1)
         phi = phi.transpose((0, 4, 1, 5, 2, 6, 3, 7, 8))
         new_dim = phi.shape[0] * phi.shape[1]
