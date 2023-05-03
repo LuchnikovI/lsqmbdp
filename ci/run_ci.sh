@@ -14,10 +14,26 @@ else
     cuda_tag="cpu"
 fi
 
-docker run lsqmbdp.${cuda_tag}:${VERSION} --typecheck
+if docker run lsqmbdp.${cuda_tag}:${VERSION} --typecheck; then
+    log INFO Type checking OK
+else
+    log ERROR Type checking failed
+    exit 1
+fi
 
 log INFO "Running tests..."
 
-docker run lsqmbdp.${cuda_tag}:${VERSION} --test
+if docker run lsqmbdp.${cuda_tag}:${VERSION} --test; then
+    log INFO Testing OK
+else
+    log ERROR Testing failed
+    exit 1
+fi
+
+if docker run lsqmbdp.${cuda_tag}:${VERSION} --lint; then
+    log INFO Linting OK
+else
+    log WARNING Linting failed
+fi
 
 log INFO "Done!"

@@ -15,7 +15,7 @@ case $1 in
     ;;
   *)
         echo "Unknown option: '$1'"
-        echo "Usage: $(basename $0) (--test|--typecheck)"
+        echo "Usage: $(basename $0) (--test|--typecheck|--lint)"
         echo "More options will be implemented later"
         exit 1
     ;;
