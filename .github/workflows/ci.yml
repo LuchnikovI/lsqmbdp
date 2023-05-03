@@ -5,4 +5,4 @@ jobs:
   check-bats-version:
     runs-on: ubuntu-latest
     steps:
-      - run: chmod +x ./ci/run_ci.sh && ./ci/run_ci.sh
+      - run: chmod +x ${GITHUB_WORKSPACE}/ci/run_ci.sh && ${GITHUB_WORKSPACE}/ci/run_ci.sh
