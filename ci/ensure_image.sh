@@ -34,6 +34,8 @@ RUN python3.10 -m pip install numpy
 RUN python3.10 -m pip install pytest
 RUN python3.10 -m pip install -U mypy
 RUN python3.10 -m pip install pylint
+RUN python3.10 -m pip install jaxtyping
+RUN python3.10 -m pip install chex
 RUN ${jax_install}
 COPY ./src ./src
 COPY ./ci/entrypoint.sh ./src/entrypoint.sh
