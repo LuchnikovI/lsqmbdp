@@ -1,7 +1,8 @@
 """Matrix product array (MPA)."""
 from typing import List, Tuple
+from functools import partial
 import jax.numpy as jnp
-from jax import Array
+from jax import Array, vmap
 from jax.random import KeyArray, split
 from utils import _random_normal_complex
 
@@ -146,3 +147,48 @@ def set_to_forward_canonical(mpa: MPA) -> Array:
         mpa[i] = ker
     mpa[-1] = jnp.tensordot(mpa[-1], rker, axes=1)
     return log_norm
+
+
+@partial(vmap, in_axes=(None, 0))
+def mpa_log_eval(mpa: MPA, indices: Array) -> Tuple[Array, Array]:
+    """Computes logarithmic values of an MPA for a given set of indices.
+    Note, that it reshapes all physical indices of each kernel into a single
+    physical multi-index before actual evaluation.
+    Args:
+        mpa: MPA,
+        indices: indices for which to evaluate elements
+    Returns: log|mps[indices]|, exp(i * arg(mps[indices]))
+    """
+
+    def _eval_ker(
+        left_state: Array,
+        ker: Array,
+        index: Array,
+    ) -> Array:
+        left_bond = ker.shape[0]
+        right_bond = ker.shape[-1]
+        ker = ker.reshape((left_bond, -1, right_bond))
+        left_state = jnp.tensordot(left_state, ker[:, index], axes=1)
+        return left_state
+    left_state = jnp.ones((1,))
+    log_norm = jnp.array(0.)
+    for (ker, index) in zip(mpa, indices):
+        left_state = _eval_ker(left_state, ker, index)
+        norm = jnp.linalg.norm(left_state)
+        left_state /= norm
+        log_norm += jnp.log(norm)
+    return log_norm, left_state[0]
+
+
+def mpa_eval(mpa: MPA, indices: Array) -> Array:
+    """Computes values of an MPA for a given set of indices.
+    Note, that it reshapes all physical indices of each kernel into a single
+    physical multi-index before actual evaluation.
+    Args:
+        mpa: MPA,
+        indices: indices for which to evaluate elements
+    Returns: MPA values
+    """
+
+    log_norm, exp_phi = mpa_log_eval(mpa, indices)
+    return jnp.exp(log_norm) * exp_phi

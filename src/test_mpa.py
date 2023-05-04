@@ -5,13 +5,14 @@ from typing import List
 import jax.numpy as jnp
 import pytest
 from jax.random import KeyArray
-from jax.random import split, PRNGKey
+from jax.random import split, PRNGKey, categorical
 from mpa import (
     mpa_gen_random,
     mpa2tensor,
     mpa_sum,
     set_to_forward_canonical,
     mpa_dot,
+    mpa_eval,
 )
 
 KEY = PRNGKey(42)
@@ -91,3 +92,28 @@ def test_dot_and_forward_canonical(
         ker = ker.reshape((left_bond, -1, right_bond))
         kerker = jnp.tensordot(ker, ker.conj(), axes=[[0, 1], [0, 1]])
         assert((jnp.abs(kerker - jnp.eye(kerker.shape[0])) < ACC).all())
+
+
+@pytest.mark.parametrize("subkey", split(KEY, 2))
+@pytest.mark.parametrize("shapes",
+                         [
+                             [[1]],
+                             [[4]],
+                             [[2], [3], [4], [3], [2], [1], [5]]
+                         ])
+@pytest.mark.parametrize("bond_dim", [1, 5])
+def test_eval(
+        subkey: KeyArray,
+        shapes: List[List[int]],
+        bond_dim: int,
+):
+    """Tests eval function."""
+
+    mpa = mpa_gen_random(subkey, shapes, bond_dim)
+    arr = mpa2tensor(mpa).reshape((-1,))
+    _, subkey = split(subkey)
+    arr_indices = categorical(subkey, jnp.ones(arr.size), shape=(10,))
+    mpa_indices = jnp.array(jnp.unravel_index(arr_indices, [s[0] for s in shapes])).T
+    arr_values = arr[arr_indices]
+    mpa_values = mpa_eval(mpa, mpa_indices)
+    assert (jnp.abs(mpa_values - arr_values) / jnp.abs(mpa_values + arr_values) < ACC).all()
