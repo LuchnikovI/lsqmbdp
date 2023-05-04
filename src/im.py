@@ -3,7 +3,6 @@
 from typing import List
 import jax.numpy as jnp
 from jax import Array
-from jax.typing import ArrayLike
 from jax.random import KeyArray, split
 from utils import _gen_random_channel
 
