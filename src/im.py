@@ -2,11 +2,12 @@
 
 from typing import List
 import jax.numpy as jnp
+from jax import Array
+from jax.typing import ArrayLike
 from jax.random import KeyArray, split
-from jaxtyping import Array, Complex64
 from utils import _gen_random_channel
 
-InfluenceMatrix = List[Complex64[Array, "#bd 2 2 2 2 #bd"]]
+InfluenceMatrix = List[Array]
 
 def random_im(
         key: KeyArray,
@@ -26,7 +27,7 @@ def random_im(
             out_dim: int,
             inp_dim: int,
             subkey: KeyArray
-    ) -> Complex64[Array, "_l 2 2 2 2 _r"]:
+    ) -> Array:
         ker = _gen_random_channel(subkey, 2 * inp_dim, 2 * out_dim, local_choi_rank)
         ker = ker.reshape((2, out_dim, 2, out_dim, 2, inp_dim, 2, inp_dim))
         ker = ker.transpose((1, 3, 0, 2, 4, 6, 5, 7))
@@ -50,7 +51,7 @@ def random_im(
 
 def im2phi(
         influance_matrix: InfluenceMatrix,
-) -> Complex64[Array, "dim dim dim dim"]:
+) -> Array:
     """Transforms an influence matrix to a quantum channel.
     Args:
         im: influence matrix
