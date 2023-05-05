@@ -37,8 +37,6 @@ def random_im(
     inp_dims = (time_steps - 1) * [sqrt_bond_dim] + [1]
     kers = [gen_ker(out_dim, inp_dim, subkey) for (out_dim, inp_dim, subkey)\
              in zip(out_dims, inp_dims, subkeys)]
-    for ker in kers:
-        print(ker.shape)
     last_ker =  kers[0]
     last_ker = last_ker.reshape(
         (sqrt_bond_dim, sqrt_bond_dim, 2, 2, 2, 2, -1)
