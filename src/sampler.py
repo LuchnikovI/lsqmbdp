@@ -21,7 +21,7 @@ def im2sampler(
         ker = jnp.tensordot(ker, projs, axes=[[1, 2], [3, 2]])
         ker = jnp.tensordot(ker, projs, axes=[[1, 2], [3, 2]])
         ker = ker.transpose((0, 2, 4, 3, 5, 1))
-        ker = ker.reshape((left_bond, 4, 16, right_bond))
+        ker = ker.reshape((left_bond, 4, 16, right_bond)) / 2.
         return ker
     sampler = [translate_ker(ker) for ker in influence_matrix]
     return sampler
