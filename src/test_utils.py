@@ -7,6 +7,8 @@ from utils import _gen_random_channel
 
 KEY = PRNGKey(42)
 
+ACC = 1e-5
+
 @pytest.mark.parametrize("subkey", split(KEY, 2))
 @pytest.mark.parametrize("local_choi_rank", [1, 2, 4])
 @pytest.mark.parametrize("inp_dim,out_dim",
@@ -26,9 +28,9 @@ def test_gen_random_channel(
     phi = _gen_random_channel(subkey, inp_dim, out_dim, local_choi_rank)
     phi = phi.reshape((out_dim, out_dim, inp_dim, inp_dim))
     tr_phi = phi.trace(axis1=0, axis2=1)
-    assert (jnp.abs(tr_phi - jnp.eye(inp_dim)) < 1e-5).all()
+    assert (jnp.abs(tr_phi - jnp.eye(inp_dim)) < ACC).all()
     phi = phi.transpose((0, 2, 1, 3))
     phi = phi.reshape((out_dim * inp_dim, out_dim * inp_dim))
-    assert (jnp.abs(phi - phi.T.conj()) < 1e-5).all()
+    assert (jnp.abs(phi - phi.T.conj()) < ACC).all()
     lmbd = jnp.linalg.eigvalsh(phi)
-    assert (lmbd > -1e-5).all()
+    assert (lmbd > -ACC).all()
