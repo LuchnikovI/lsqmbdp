@@ -1,3 +1,11 @@
-lsqmbdp stands for large-scale quantum many-body data processing.
+## How to build
+For a CPU based version:
 
-CI and CUDA not yet running properly (fix tomorrow)
+`./ci/ensure_image.sh`
+
+for a GPU based version:
+
+`USE_CUDA=1 ./ci/ensure_image.sh`
+
+## How to test
+`./ci/run_ci.sh`
