@@ -35,10 +35,12 @@ RUN python3.10 -m pip install pytest
 RUN python3.10 -m pip install -U mypy
 RUN python3.10 -m pip install pylint
 RUN python3.10 -m pip install chex
+RUN python3.10 -m pip install termtables
 RUN ${jax_install}
 COPY ./src ./src
 COPY ./ci/entrypoint.sh ./src/entrypoint.sh
 RUN chmod +x ./src/entrypoint.sh
+RUN chmod +x ./src/benchmarks.py
 
 ENTRYPOINT [ "./src/entrypoint.sh" ]
 
