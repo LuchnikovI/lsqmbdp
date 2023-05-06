@@ -13,7 +13,7 @@ for a GPU based version:
 ## How to run benchmarks
 For a CPU based version:
 
-`docker run lsqmbdp.cpu:0.0.1 -bench`
+`docker run lsqmbdp.cpu:0.0.1 --bench`
 
 If you desire to emulate multiple devices (here we took 2 just for example):
 
@@ -21,4 +21,4 @@ If you desire to emulate multiple devices (here we took 2 just for example):
 
 For a GPU based version (one needs to have Nvidia Container Toolkit, Nvidia drives and at least one Nvidia GPU):
 
-`docker run --gpus all lsqmbdp.cuda:0.0.1 -bench`
+`docker run --gpus all lsqmbdp.cuda:0.0.1 --bench`
