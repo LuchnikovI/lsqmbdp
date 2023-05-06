@@ -2,6 +2,11 @@
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
+export SQ_BOND_DIM=${SQ_BOND_DIM:-"15"}
+export TIME_STEPS=${TIME_STEPS:-"70"}
+export SAMPLES_NUMBER=${SAMPLES_NUMBER:-"100"}
+export SEED=${SEED:-"42"}
+
 case $1 in
 
   --test)
@@ -13,10 +18,14 @@ case $1 in
   --lint)
         pylint "${script_dir}/../src"
     ;;
+  --bench)
+        "${script_dir}/../src/benchmarks.py"
+    ;;
   *)
         echo "Unknown option: '$1'"
-        echo "Usage: $(basename $0) (--test|--typecheck|--lint)"
+        echo "Usage: $(basename $0) (--test|--typecheck|--lint|--bench)"
         echo "More options will be implemented later"
         exit 1
     ;;
+  
 esac
