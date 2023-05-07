@@ -3,10 +3,75 @@
 from typing import List
 import jax.numpy as jnp
 from jax import Array
-from jax.random import KeyArray, split
-from utils import _gen_random_channel
+from jax.random import KeyArray, split, normal
 
 InfluenceMatrix = List[Array]
+
+InfluenceMatrixParameters = List[Array]
+
+def random_params(
+        subkey: KeyArray,
+        time_steps: int,
+        local_choi_rank: int,
+        sqrt_bond_dim: int,
+) -> InfluenceMatrixParameters:
+    """Generates isometric matrices that parametrize an influence matrix.
+    Args:
+        subkey: jax random seed
+        time_steps: number of time steps
+        local_choi_rank: local choi rank
+        sqrt_bond_dim: square root of bond dimension
+    Returns: Influence matrix parameters"""
+
+    def gen_random_isom(
+            subkey: KeyArray,
+            out_dim: int,
+            inp_dim: int,
+    ) -> Array:
+        ker = normal(subkey, (out_dim, inp_dim, 2))
+        ker = ker[..., 0] + 1j * ker[..., 1]
+        ker, _ = jnp.linalg.qr(ker)
+        return ker
+    out_dims = time_steps * [2 * sqrt_bond_dim * local_choi_rank]
+    inp_dims = (time_steps - 1) * [2 * sqrt_bond_dim] + [2]
+    subkeys = split(subkey, time_steps)
+    params = [gen_random_isom(subkey, out_dim, inp_dim)\
+              for subkey, out_dim, inp_dim in zip(subkeys, out_dims, inp_dims)]
+    return params
+
+
+def params2im(
+        params: InfluenceMatrixParameters,
+        local_choi_rank: int,
+) -> InfluenceMatrix:
+    """Transforms parameters of an influence matrix into the influence matrix.
+    Args:
+        params: isometric matrices that parametrize an influance matrix
+        local_choi_rank: local choi rank
+    Returns: Influence matrix"""
+
+    def translate_ker(
+            ker: Array,
+    ) -> Array:
+        total_out_dim, total_inp_dim = ker.shape
+        inp_dim = int(total_inp_dim / 2)
+        out_dim = int(total_out_dim / (2 * local_choi_rank))
+        ker = ker.reshape((local_choi_rank, 2, out_dim, 2, inp_dim))
+        ker = jnp.tensordot(ker, ker.conj(), axes=[[0], [0]])
+        ker = ker.transpose((1, 5, 0, 4, 2, 6, 3, 7))
+        ker = ker.reshape((out_dim ** 2, 2, 2, 2, 2, inp_dim ** 2))
+        return ker
+    influence_matrix = [translate_ker(ker) for ker in params]
+    total_out_dim, total_inp_dim = params[0].shape
+    out_dim = int(total_out_dim / (2 * local_choi_rank))
+    inp_dim = int(total_inp_dim / 2)
+    last_ker = influence_matrix[0]
+    last_ker = last_ker.reshape((out_dim, out_dim, 2, 2, 2, 2, inp_dim ** 2))
+    last_ker = last_ker.trace(axis1=0, axis2=1)[jnp.newaxis]
+    influence_matrix[0] = last_ker
+    return influence_matrix
+
+
 
 def random_im(
         key: KeyArray,
@@ -22,27 +87,8 @@ def random_im(
         sqrt_bomd_dim: square root of the bond dim
     Return: random influence matrix"""
 
-    def gen_ker(
-            out_dim: int,
-            inp_dim: int,
-            subkey: KeyArray
-    ) -> Array:
-        ker = _gen_random_channel(subkey, 2 * inp_dim, 2 * out_dim, local_choi_rank)
-        ker = ker.reshape((2, out_dim, 2, out_dim, 2, inp_dim, 2, inp_dim))
-        ker = ker.transpose((1, 3, 0, 2, 4, 6, 5, 7))
-        ker = ker.reshape((out_dim * out_dim, 2, 2, 2, 2, inp_dim * inp_dim))
-        return ker
-    subkeys = split(key, time_steps)
-    out_dims = time_steps * [sqrt_bond_dim]
-    inp_dims = (time_steps - 1) * [sqrt_bond_dim] + [1]
-    kers = [gen_ker(out_dim, inp_dim, subkey) for (out_dim, inp_dim, subkey)\
-             in zip(out_dims, inp_dims, subkeys)]
-    last_ker =  kers[0]
-    last_ker = last_ker.reshape(
-        (sqrt_bond_dim, sqrt_bond_dim, 2, 2, 2, 2, -1)
-    )
-    last_ker = last_ker.trace(axis1=0, axis2=1)
-    kers[0] = last_ker[jnp.newaxis]
+    params = random_params(key, time_steps, local_choi_rank, sqrt_bond_dim)
+    kers = params2im(params, local_choi_rank)
     return kers
 
 
