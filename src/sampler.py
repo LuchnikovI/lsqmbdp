@@ -43,7 +43,7 @@ def _gen_samples(
     right_state = jnp.ones((1,))
     subkeys = split(subkey, size)
     idx = size - 1
-    samples = jnp.zeros((size,))
+    samples = jnp.zeros((size,), dtype=jnp.int32)
     while len(left_states) != 0:
         left_state = left_states.pop()
         ker = sampler[idx]
@@ -75,3 +75,34 @@ def gen_samples(
     size = indices.shape[0]
     subkey = split(subkey, size)
     return _gen_samples(subkey, sampler, indices)
+
+
+@partial(vmap, in_axes=(None, 0, 0))
+def _log_prob(
+        sampler: Sampler,
+        indices: Array,
+        samples: Array,
+) -> Array:
+    state = jnp.ones((1,))
+    log_abs = jnp.zeros((1,))
+    for (ker, index, sample) in zip(sampler, indices, samples):
+        state = jnp.tensordot(state, ker[:, sample, index], axes=1)
+        norm = jnp.linalg.norm(state)
+        state /= norm
+        log_abs += jnp.log(norm)
+    return log_abs[0].real
+
+
+def log_prob(
+        sampler: Sampler,
+        indices: Array,
+        samples: Array,
+) -> Array:
+    """Computes a logarithmic probability of measurements outcomes.
+    Args:
+        sampler: Sampler
+        indices: measurement basis
+        samples: measurement outcomes
+    Returns: logarithm of probability"""
+
+    return _log_prob(sampler, indices, samples).sum(0)
