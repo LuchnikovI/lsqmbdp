@@ -88,10 +88,10 @@ def main():
     end = time.time()
     grad_time_wo_compilation = end - start
     data = [
-        ["Sampling time w/ compilation time", float(f'{sampling_time_w_compilation:.2f}'), "seconds"],
-        ["Gradient time w/ compilation time", float(f'{grad_time_w_compilation:.2f}'), "seconds"],
-        ["Sampling time w/o compilation time", float(f'{sampling_time_wo_compilation:.2f}'), "seconds"],
-        ["Gradient time w/o compilation time", float(f'{grad_time_wo_compilation:.2f}'), "seconds"],
+        ["Sampling time w/ compilation time", float(f'{sampling_time_w_compilation:.3f}'), "seconds"],
+        ["Gradient time w/ compilation time", float(f'{grad_time_w_compilation:.3f}'), "seconds"],
+        ["Sampling time w/o compilation time", float(f'{sampling_time_wo_compilation:.3f}'), "seconds"],
+        ["Gradient time w/o compilation time", float(f'{grad_time_wo_compilation:.3f}'), "seconds"],
     ]
     tt.print(data)
     print("Shape of the resulting array of samples: {}".format(samples.shape))
