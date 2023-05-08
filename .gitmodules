@@ -1,0 +1,3 @@
+[submodule "qgoptax"]
+	path = qgoptax
+	url = https://github.com/LuchnikovI/qgoptax/
