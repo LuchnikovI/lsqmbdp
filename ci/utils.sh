@@ -2,7 +2,6 @@
 
 ci_utils_script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
-export VERSION=${VERSION:-'0.0.1'}
 export USE_CUDA=${USE_CUDA:-0}
 export LOG_LEVELS=${LOG_LEVELS:-'DEBUG INFO WARNING ERROR'}
 export UBUNTU_VERSION=${UBUNTU_VERSION:-'20.04'}
