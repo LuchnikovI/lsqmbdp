@@ -9,7 +9,7 @@ from im import InfluenceMatrix
 from constants import projs
 from sampler_utils import _build_left_states, _push_to_left
 
-REGULARIZER = 1e-6
+REGULARIZER = 0
 
 Sampler = List[Array]
 
@@ -87,7 +87,7 @@ def _log_prob(
     log_abs = jnp.zeros((1,))
     for (ker, index, sample) in zip(sampler, indices, samples):
         state = jnp.tensordot(state, ker[:, sample, index], axes=1)
-        norm = jnp.linalg.norm(state)
+        norm = jnp.linalg.norm(state) + REGULARIZER
         state /= norm
         log_abs += jnp.log(norm)
     return log_abs[0].real
