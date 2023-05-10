@@ -33,7 +33,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common curl&& \
     DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:deadsnakes/ppa && \
     DEBIAN_FRONTEND=noninteractive apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt install -y python3.10 python3-pip
+    DEBIAN_FRONTEND=noninteractive apt install -y git python3.10 python3-pip
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 RUN python3.10 -m pip install --upgrade pip
 RUN python3.10 -m pip install numpy
@@ -44,19 +44,22 @@ RUN python3.10 -m pip install chex
 RUN python3.10 -m pip install termtables
 RUN python3.10 -m pip install argparse
 RUN python3.10 -m pip install h5py
+RUN python3.10 -m pip install -U setuptools
+RUN python3.10 -m pip install git+https://github.com/LuchnikovI/qgoptax/
 RUN ${jax_install}
 COPY ./src ./src
 COPY ./ci/entrypoint.sh ./src/entrypoint.sh
 RUN chmod +x ./src/entrypoint.sh
 RUN chmod +x ./src/benchmarks.py
 RUN chmod +x ./src/random_im.py
+RUN chmod +x ./src/gen_samples.py
 RUN chmod +x ./src/train_im.py
 
 ENTRYPOINT [ "./src/entrypoint.sh" ]
 
 EOF
 
-if docker build -t lsqmbdp.${cuda_tag}:${VERSION} -f - "${script_dir}/.." < "${script_dir}/Dockerfile";
+if docker build -t luchnikovi/lsqmbdp.${cuda_tag}:latest -f - "${script_dir}/.." < "${script_dir}/Dockerfile";
 then
     log INFO "Image has been built"
     clean_dockerfile  # TODO: better to use trap
