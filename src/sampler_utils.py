@@ -62,7 +62,7 @@ def _sample_from_solid_probability(
     size = len(probability.shape)
     subkeys = split(subkey, size)
     idx = size - 1
-    samples = jnp.zeros((size,))
+    samples = jnp.zeros((size,), dtype=jnp.int32)
     for _ in range(size):
         probability = probability.reshape((-1, 4))
         marginal_prob = probability.sum(0)
