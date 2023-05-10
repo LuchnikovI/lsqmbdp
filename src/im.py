@@ -16,6 +16,14 @@ def random_unitary_params(
         local_choi_rank: int,
         sqrt_bond_dim: int,
 ) -> InfluenceMatrixParameters:
+    """Generates isometric matrices that parametrize an influence matrix.
+    Those isometric matrices lead to Choi rank 1.
+    Args:
+        subkey: jax random seed
+        time_steps: number of time steps
+        local_choi_rank: local choi rank
+        sqrt_bond_dim: square root of bond dimension
+    Returns: Influence matrix parameters"""
 
     def gen_random_isom(
             subkey: KeyArray,

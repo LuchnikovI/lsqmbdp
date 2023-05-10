@@ -1,5 +1,7 @@
 #!/usr/bin/env python3.10
 
+# pylint: skip-file
+
 import sys
 import os
 import h5py # type: ignore

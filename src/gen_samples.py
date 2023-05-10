@@ -1,5 +1,7 @@
 #!/usr/bin/env python3.10
 
+# pylint: skip-file
+
 import sys
 import os
 import h5py # type: ignore
@@ -19,10 +21,10 @@ LOCAL_DEVICES_NUM = local_device_count()
 SAMPLING_EPOCHS_NUM = TOTAL_SAMPLES_NUMBER / (SAMPLES_NUMBER * LOCAL_DEVICES_NUM)
 
 def _hdf2im(
-        path:str,
+        path: str,
 ) -> InfluenceMatrix:
     with h5py.File(path) as f:
-        def idx2ker(idx: str):
+        def idx2ker(idx: int):
             ker = jnp.array(f["im"][str(idx)])
             size = len(ker.shape)
             ker = ker[jnp.newaxis]

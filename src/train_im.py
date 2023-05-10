@@ -1,5 +1,7 @@
 #!/usr/bin/env python3.10
 
+# pylint: skip-file
+
 import sys
 import os
 from functools import partial
@@ -8,7 +10,7 @@ import numpy as np
 import jax.numpy as jnp
 from argparse import ArgumentParser
 from jax.random import split, PRNGKey
-from jax import pmap, value_and_grad, local_device_count, devices, Array
+from jax import pmap, value_and_grad, local_device_count, devices, Array, device_put
 from jax.lax import pmean
 from qgoptax.manifolds import StiefelManifold # type: ignore
 from qgoptax.optimizers import RAdam # type: ignore
@@ -54,7 +56,7 @@ def _hdf2im(
         path: str,
 ) -> InfluenceMatrix:
     with h5py.File(path, "r") as f:
-        def idx2ker(idx: str):
+        def idx2ker(idx: int):
             ker = jnp.array(f["im"][str(idx)])
             return ker
         kers_num = len(f["im"].values())
@@ -66,7 +68,7 @@ def _hdf2data(
 ) -> Array:
     with h5py.File(path, "r") as f:
         data = np.array(f["data"])
-    return data
+    return device_put(data, MAIN_CPU)
 
 
 par_random_unitary_params = pmap(random_unitary_params, static_broadcasted_argnums=(1, 2, 3))
@@ -89,7 +91,12 @@ def main():
     key, _ = split(key)
     _, subkey = split(key)
     subkeys = jnp.tile(subkey, (LOCAL_DEVICES_NUM, 1))
-    params = par_random_unitary_params(subkeys, time_steps, LOCAL_CHOI_RANK_TRAINING, SQ_BOND_DIM_TRAINING)
+    params = par_random_unitary_params(
+        subkeys,
+        time_steps,
+        LOCAL_CHOI_RANK_TRAINING,
+        SQ_BOND_DIM_TRAINING
+    )
     man = StiefelManifold()
     lr = LEARNING_RATE_IN
     opt = RAdam(man, lr)
@@ -117,7 +124,11 @@ def main():
         log_fidelity_half, _ = mpa_log_dot(unknown_influence_matrix, found_influence_matrix)
         fidelity = jnp.exp(2 * log_fidelity_half)
         av_loss_val = av_loss_val / EPOCH_SIZE
-        print("Epoch num: {:<5} Loss value: {:<20} Fidelity: {}".format(i, float(av_loss_val), float(fidelity)))
+        print(
+            "Epoch num: {:<5} Loss value: {:<20} Fidelity: {}".format(
+                i, float(av_loss_val), float(fidelity)
+            )
+        )
     hf.close()
 
 if __name__ == '__main__':

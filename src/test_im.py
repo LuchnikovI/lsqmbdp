@@ -42,7 +42,8 @@ def test_random_unitary_im(
         local_choi_rank: int,
         sqrt_bond_dim: int,
 ):
-    """Tests random_unitary_im function by building an explicit channel and testing its properties"""
+    """Tests random_unitary_im function by building
+    an explicit channel and testing its properties"""
     influance_matrix = random_unitary_im(subkey, time_steps, local_choi_rank, sqrt_bond_dim)
     phi = im2phi(influance_matrix)
     dim = 2 ** time_steps
