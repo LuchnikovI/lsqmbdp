@@ -9,12 +9,12 @@ import h5py # type: ignore
 import numpy as np
 import jax.numpy as jnp
 from argparse import ArgumentParser
-from jax.random import split, PRNGKey
+from jax.random import split, PRNGKey, permutation
 from jax import pmap, value_and_grad, local_device_count, devices, Array, device_put
 from jax.lax import pmean
 from qgoptax.manifolds import StiefelManifold # type: ignore
 from qgoptax.optimizers import RAdam # type: ignore
-from sampler import log_prob, im2sampler
+from sampler import log_prob
 from im import InfluenceMatrixParameters, InfluenceMatrix, params2im, random_unitary_params
 from mpa import set_to_forward_canonical, mpa_log_dot
 
@@ -22,16 +22,17 @@ from mpa import set_to_forward_canonical, mpa_log_dot
 SCRIPT_PATH = os.path.dirname(sys.argv[0])
 LEARNING_RATE_IN = float(str(os.environ.get("LEARNING_RATE_IN")))
 LEARNING_RATE_FINAL = float(str(os.environ.get("LEARNING_RATE_FINAL")))
-SAMPLES_NUMBER = int(str(os.environ.get("SAMPLES_NUMBER")))
+SAMPLES_NUMBER_TRAINING = int(str(os.environ.get("SAMPLES_NUMBER_TRAINING")))
 TOTAL_SAMPLES_NUMBER = int(str(os.environ.get("TOTAL_SAMPLES_NUMBER")))
 SQ_BOND_DIM_TRAINING = int(str(os.environ.get("SQ_BOND_DIM_TRAINING")))
 EPOCHS_NUMBER = int(str(os.environ.get("EPOCHS_NUMBER")))
 SEED = int(str(os.environ.get("SEED")))
 LOCAL_DEVICES_NUM = local_device_count()
-EPOCH_SIZE = int(TOTAL_SAMPLES_NUMBER / (SAMPLES_NUMBER * LOCAL_DEVICES_NUM))
+EPOCH_SIZE = int(TOTAL_SAMPLES_NUMBER / (SAMPLES_NUMBER_TRAINING * LOCAL_DEVICES_NUM))
 MAIN_CPU = devices("cpu")[0]
-DECAY_COEFF = (LEARNING_RATE_FINAL / LEARNING_RATE_IN) ** (1 / EPOCH_SIZE)
+DECAY_COEFF = (LEARNING_RATE_FINAL / LEARNING_RATE_IN) ** (1 / EPOCHS_NUMBER)
 LOCAL_CHOI_RANK_TRAINING = int(str(os.environ.get("LOCAL_CHOI_RANK_TRAINING")))
+DATA_TAIL_SHAPE = (EPOCH_SIZE, LOCAL_DEVICES_NUM, SAMPLES_NUMBER_TRAINING)
 
 
 @pmap
@@ -40,9 +41,7 @@ def _loss_and_grad(
         params: InfluenceMatrixParameters,
         data: Array,
 ) -> Array:
-    im = params2im(params, LOCAL_CHOI_RANK_TRAINING)
-    s = im2sampler(im)
-    return -log_prob(s, data[:, 0], data[:, 1])
+    return -log_prob(params, data[:, 0], data[:, 1], LOCAL_CHOI_RANK_TRAINING) * EPOCH_SIZE
 
 
 @partial(pmap, axis_name='i')
@@ -83,7 +82,7 @@ def main():
     set_to_forward_canonical(unknown_influence_matrix)
     time_steps = len(unknown_influence_matrix)
     data = _hdf2data(SCRIPT_PATH + "/../shared_dir/" + args.name + "_data")
-    data = data.reshape((EPOCH_SIZE, LOCAL_DEVICES_NUM, SAMPLES_NUMBER, 2, time_steps))
+    data = data.reshape((*DATA_TAIL_SHAPE, 2, time_steps))
     # ---------------------------------------------------------------------------------
     key = PRNGKey(SEED)
     key, _ = split(key)
@@ -111,7 +110,8 @@ def main():
             grads = _av_grad(grads)
             params, opt_state = opt.update(grads, opt_state, params)
             av_loss_val += loss_val
-        np.random.shuffle(data)
+        key, subkey = split(key)
+        data = permutation(subkey, data.reshape((-1, 2, time_steps)), False).reshape((*DATA_TAIL_SHAPE, 2, time_steps))
         lr *= DECAY_COEFF
         found_influence_matrix = params2im([ker[0] for ker in params], LOCAL_CHOI_RANK_TRAINING)
         if av_loss_val < best_loss_val:
@@ -123,10 +123,9 @@ def main():
         set_to_forward_canonical(found_influence_matrix)
         log_fidelity_half, _ = mpa_log_dot(unknown_influence_matrix, found_influence_matrix)
         fidelity = jnp.exp(2 * log_fidelity_half)
-        av_loss_val = av_loss_val / EPOCH_SIZE
         print(
-            "Epoch num: {:<5} Loss value: {:<20} Fidelity: {}".format(
-                i, float(av_loss_val), float(fidelity)
+            "Epoch num: {:<5} Loss value: {:<20} Fidelity: {:<20} LR: {}".format(
+                i, float(av_loss_val), float(fidelity), lr
             )
         )
     hf.close()
