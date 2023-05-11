@@ -17,7 +17,7 @@ image_name="luchnikovi/lsqmbdp.${cuda_flag}:latest"
 exec="docker run -it ${run_flags} -v im_experiments:/lsqmbdp/shared_dir ${image_name}"
 
 # check docker
-if docker --version &> /dev/null; then
+if docker --version > /dev/null; then
     echo "Docker is found"
 else
     echo "ERROR: docker is not found, please install docker first"
@@ -25,7 +25,7 @@ else
 fi
 
 # create a volume for computation results
-if docker volume create im_experiments &> /dev/null; then
+if docker volume create im_experiments > /dev/null; then
     echo "A volume for computation results has been created"
 else
     echo "ERROR: unable to create a volume for computation results"
@@ -37,10 +37,10 @@ if docker image inspect $image_name &> /dev/null; then
     echo "lsqmbdp image is found"
 else
     echo "lsqmbd image is not found -> donwloading..."
-    if docker pull $image_name &> /dev/null; then
+    if docker pull $image_name > /dev/null; then
         echo "lsqmbd image has been downloaded"
     else
-        echo "ERROR: Unable to dowmload lsqmbd image"
+        echo "ERROR: Unable to download lsqmbd image"
         exit 1
     fi
 fi
