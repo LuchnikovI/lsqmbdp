@@ -5,7 +5,7 @@ from typing import List
 from jax import Array, vmap
 from jax.random import KeyArray, split, categorical
 import jax.numpy as jnp
-from im import InfluenceMatrix
+from im import InfluenceMatrix, InfluenceMatrixParameters
 from constants import projs
 from sampler_utils import _build_left_states, _push_to_left
 
@@ -77,32 +77,51 @@ def gen_samples(
     return _gen_samples(subkey, sampler, indices)
 
 
-@partial(vmap, in_axes=(None, 0, 0))
+@partial(vmap, in_axes=(None, 0, 0, None))
 def _log_prob(
-        sampler: Sampler,
+        params: InfluenceMatrixParameters,
         indices: Array,
         samples: Array,
+        local_choi_dim: int,
 ) -> Array:
-    state = jnp.ones((1,))
+    state = jnp.ones((1, 1))
     log_abs = jnp.zeros((1,))
-    for (ker, index, sample) in zip(sampler, indices, samples):
-        state = jnp.tensordot(state, ker[:, sample, index], axes=1)
-        norm = jnp.linalg.norm(state) + REGULARIZER
+    for (ker, index, sample) in zip(params[::-1], indices[::-1], samples[::-1]):
+        idx0, idx1 = jnp.unravel_index(index, (4, 4))
+        smp0, smp1 = jnp.unravel_index(sample, (2, 2))
+        projs0 = projs[smp0, idx0]
+        projs1 = projs[smp1, idx1]
+        _, total_inp_dim = ker.shape
+        inp_dim = int(total_inp_dim / 2)
+        ker = ker.reshape((local_choi_dim, 2, -1, 2, inp_dim))
+        conj_ker = ker.conj()
+        conj_ker = conj_ker.transpose((2, 3, 1, 0, 4))
+        conj_ker = conj_ker.reshape((-1, 4 * local_choi_dim, inp_dim))
+        ker = jnp.tensordot(projs0, ker, axes=[[1], [1]])
+        ker = jnp.tensordot(projs1, ker, axes=[[1], [3]])
+        ker = ker.transpose((3, 0, 1, 2, 4))
+        ker = ker.reshape((-1, 4 * local_choi_dim, inp_dim))
+        state = jnp.tensordot(conj_ker, state, axes=[[2], [1]])
+        state = jnp.tensordot(ker, state, axes=[[1, 2], [1, 2]])
+        norm = jnp.linalg.norm(state)
         state /= norm
         log_abs += jnp.log(norm)
+    log_abs += jnp.log(jnp.trace(state))
     return log_abs[0].real
 
 
 def log_prob(
-        sampler: Sampler,
+        params: InfluenceMatrixParameters,
         indices: Array,
         samples: Array,
+        local_choi_dim: int,
 ) -> Array:
     """Computes a logarithmic probability of measurements outcomes.
     Args:
-        sampler: Sampler
+        params: parameters of an influence matrix
         indices: measurement basis
         samples: measurement outcomes
+        local_choi_dim: local Choi rank
     Returns: logarithm of probability"""
 
-    return _log_prob(sampler, indices, samples).sum(0)
+    return _log_prob(params, indices, samples, local_choi_dim).sum(0)
