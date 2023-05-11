@@ -53,9 +53,7 @@ def main():
             indices: Array,
             samples: Array,
     ):
-        im = params2im(params, 4 * (sq_bond_dim ** 2))
-        s = im2sampler(im)
-        return -log_prob(s, indices, samples)
+        return -log_prob(params, indices, samples,local_choi_rank)
 
     # parallelized sampler
     p_gen_samples = pmap(gen_samples, in_axes=(0, None, 0))
