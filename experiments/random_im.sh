@@ -1,9 +1,30 @@
 #!/usr/bin/env bash
 
-# -------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# This is a runner for a numerical experiment aimed on reconstruction of a random influence
+# matrix from measurement outcomes in a random basis. Parameters of an experiment are set by
+# environment variables inside a docker container. To redefine them, just edit the corresponding
+# file (random_im_env.sh)
+# -------------------------------------------------------------------------------------------------
 export USE_CUDA=${USE_CUDA:-1}  # 1 if you want to use cuda, 0 if not
 export NAME=${NAME:-"simple_random_im"}  # experiment name
-# -------------------------------------------------------------------
+
+# Here one can modify parameters of the experiment
+experiment_dockert_env="
+-e LEARNING_RATE_IN=0.25
+-e LEARNING_RATE_FINAL=0.0001
+-e EPOCHS_NUMBER=300
+-e SQ_BOND_DIM=7
+-e SQ_BOND_DIM_TRAINING=8
+-e TIME_STEPS=50
+-e SAMPLES_NUMBER=1000
+-e SAMPLES_NUMBER_TRAINING=10000
+-e TOTAL_SAMPLES_NUMBER=1000000
+-e LOCAL_CHOI_RANK=1
+-e LOCAL_CHOI_RANK_TRAINING=4
+-e SEED=42
+"
+# -------------------------------------------------------------------------------------------------
 
 if [[ $USE_CUDA == 1 ]]; then
     cuda_flag="cuda"
@@ -14,7 +35,7 @@ else
 fi
 
 image_name="luchnikovi/lsqmbdp.${cuda_flag}:latest"
-exec="docker run -it ${run_flags} -v im_experiments:/lsqmbdp/shared_dir ${image_name}"
+exec="docker run ${experiment_dockert_env} -it ${run_flags} -v im_experiments:/lsqmbdp/shared_dir ${image_name}"
 
 # check docker
 if docker --version > /dev/null; then
@@ -45,8 +66,8 @@ else
     fi
 fi
 
-# first, we pring all the parameters of an experiment
-# note, that you can modify any of them by setting the
+# First, we print all the parameters of an experiment.
+# Note, that you can modify any of them by setting the
 # corresponding environment variable in the docker container
 # https://stackoverflow.com/questions/30494050/how-do-i-pass-environment-variables-to-docker-containers
 ${exec} --get_params
