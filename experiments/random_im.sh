@@ -10,7 +10,7 @@ export USE_CUDA=${USE_CUDA:-1}  # 1 if you want to use cuda, 0 if not
 export NAME=${NAME:-"simple_random_im"}  # experiment name
 
 # Here one can modify parameters of the experiment
-experiment_dockert_env="
+export ENVIRONMENT_DOCKER_ENV=${ENVIRONMENT_DOCKER_ENV:-"
 -e LEARNING_RATE_IN=0.25
 -e LEARNING_RATE_FINAL=0.0001
 -e EPOCHS_NUMBER=300
@@ -23,7 +23,7 @@ experiment_dockert_env="
 -e LOCAL_CHOI_RANK=1
 -e LOCAL_CHOI_RANK_TRAINING=4
 -e SEED=42
-"
+"}
 # -------------------------------------------------------------------------------------------------
 
 if [[ $USE_CUDA == 1 ]]; then
@@ -35,7 +35,7 @@ else
 fi
 
 image_name="luchnikovi/lsqmbdp.${cuda_flag}:latest"
-exec="docker run ${experiment_dockert_env} -it ${run_flags} -v im_experiments:/lsqmbdp/shared_dir ${image_name}"
+exec="docker run ${ENVIRONMENT_DOCKER_ENV} -it ${run_flags} -v im_experiments:/lsqmbdp/shared_dir ${image_name}"
 
 # check docker
 if docker --version > /dev/null; then
