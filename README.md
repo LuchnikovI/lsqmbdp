@@ -1,24 +1,9 @@
-## How to build
-For a CPU based version:
+LSQMBDP stands for large scale quantum many body data processing
 
-`./ci/ensure_image.sh`
-
-for a GPU based version:
-
-`USE_CUDA=1 ./ci/ensure_image.sh`
-
-## How to test
+## How to run tests on a CPU
 `./ci/run_ci.sh`
 
-## How to run benchmarks
-For a CPU based version:
-
-`docker run lsqmbdp.cpu:0.0.1 --bench`
-
-If you desire to emulate multiple devices (here we took 2 just for example):
-
-`docker run -e XLA_FLAGS="--xla_force_host_platform_device_count=2" lsqmbdp.cpu:0.0.1 --bench`
-
-For a GPU based version (one needs to have Nvidia Container Toolkit, Nvidia drives and at least one Nvidia GPU):
-
-`docker run --gpus all lsqmbdp.cuda:0.0.1 --bench`
+## How to run experiments on a CUDA server
+1. Inspect a corresponding script from the experiments directory, modify it if necessary;
+2. Move this script to a server;
+3. Run it.
