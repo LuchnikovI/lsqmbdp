@@ -18,7 +18,7 @@ SEED = int(str(os.environ.get("SEED")))
 SCRIPT_PATH = os.path.dirname(sys.argv[0])
 MAIN_CPU = devices("cpu")[0]
 LOCAL_DEVICES_NUM = local_device_count()
-SAMPLING_EPOCHS_NUM = TOTAL_SAMPLES_NUMBER / (SAMPLES_NUMBER * LOCAL_DEVICES_NUM)
+SAMPLING_EPOCHS_NUM = int(TOTAL_SAMPLES_NUMBER / (SAMPLES_NUMBER * LOCAL_DEVICES_NUM))
 
 def _hdf2im(
         path: str,
