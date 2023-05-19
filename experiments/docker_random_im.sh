@@ -3,8 +3,7 @@
 # ------------------------------------------------------------------------------------------------
 # This is a runner for a numerical experiment aimed on reconstruction of a random influence
 # matrix from measurement outcomes in a random basis. Parameters of an experiment are set by
-# environment variables inside a docker container. To redefine them, just edit the corresponding
-# file (random_im_env.sh)
+# environment variables inside a docker container.
 # -------------------------------------------------------------------------------------------------
 export USE_CUDA=${USE_CUDA:-1}  # 1 if you want to use cuda, 0 if not
 export NAME=${NAME:-"simple_random_im"}  # experiment name
@@ -12,13 +11,13 @@ export NAME=${NAME:-"simple_random_im"}  # experiment name
 # Here one can modify parameters of the experiment
 export ENVIRONMENT_DOCKER_ENV=${ENVIRONMENT_DOCKER_ENV:-"
 -e LEARNING_RATE_IN=0.25
--e LEARNING_RATE_FINAL=0.0001
+-e LEARNING_RATE_FINAL=0.001
 -e EPOCHS_NUMBER=300
 -e SQ_BOND_DIM=7
 -e SQ_BOND_DIM_TRAINING=8
 -e TIME_STEPS=50
 -e SAMPLES_NUMBER=1000
--e SAMPLES_NUMBER_TRAINING=10000
+-e SAMPLES_NUMBER_TRAINING=2500
 -e TOTAL_SAMPLES_NUMBER=1000000
 -e LOCAL_CHOI_RANK=1
 -e LOCAL_CHOI_RANK_TRAINING=4
