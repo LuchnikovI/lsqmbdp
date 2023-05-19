@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-
 export LEARNING_RATE_IN=${LEARNING_RATE_IN:-"0.25"}
 export LEARNING_RATE_FINAL=${LEARNING_RATE_FINAL:-"0.0001"}
 export EPOCHS_NUMBER=${EPOCHS_NUMBER:-"300"}
@@ -42,7 +40,7 @@ Usage
 --gen_rand_im [-n name]: generates a random IM and saves it, optionally accepts name of the experiment (default to "random_im");
 --gen_samples [-n name]: generates samples from saved IM, optionally accepts name of the experiment (default to "random_im");
 --train_im    [-n name]: trains IM on saved samples, optionally accepts name of the experiment (default to "random_im");
---get_params:          prints all the environment variables essential for a numerical experiment;
+--get_params:            prints all the environment variables essential for a numerical experiment;
 --help                   drops this message.
 EOF
 }
@@ -53,25 +51,25 @@ case $1 in
         python3.10 -m pytest
     ;;
   --typecheck)
-        python3.10 -m mypy --exclude /qgoptax/ "${script_dir}/../src"
+        python3.10 -m mypy --exclude /qgoptax/ "/lsqmbdp/src"
     ;;
   --lint)
-        pylint --ignore-paths="${script_dir}/../src/qgoptax" "${script_dir}/../src"
+        pylint --ignore-paths="/lsqmbdp/src/qgoptax" "/lsqmbdp/src"
     ;;
   --bench)
-        "${script_dir}/../src/benchmarks.py"
+        "/lsqmbdp/src/benchmarks.py"
     ;;
   --gen_rand_im)
         shift
-        "${script_dir}/../src/random_im.py" "$@"
+        "/lsqmbdp/src/random_im.py" "$@"
     ;;
   --gen_samples)
         shift
-        "${script_dir}/../src/gen_samples.py" "$@"
+        "/lsqmbdp/src/gen_samples.py" "$@"
     ;;
   --train_im)
         shift
-        "${script_dir}/../src/train_im.py" "$@"
+        "/lsqmbdp/src/train_im.py" "$@"
     ;;
   --get_params)
         get_all_parameters
