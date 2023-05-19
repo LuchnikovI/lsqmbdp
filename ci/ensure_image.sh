@@ -55,7 +55,7 @@ RUN chmod +x ./src/random_im.py
 RUN chmod +x ./src/gen_samples.py
 RUN chmod +x ./src/train_im.py
 
-ENTRYPOINT [ "./src/entrypoint.sh" ]
+ENTRYPOINT [ "/lsqmbdp/src/entrypoint.sh" ]
 
 EOF
 
