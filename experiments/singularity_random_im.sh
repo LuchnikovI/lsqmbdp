@@ -7,22 +7,23 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 # matrix from measurement outcomes in a random basis. Parameters of an experiment are set by
 # environment variables inside a container.
 # -------------------------------------------------------------------------------------------------
+
 export NAME=${NAME:-"simple_random_im"}  # experiment name
 export USE_CUDA=${USE_CUDA:-1}  # 1 if you want to use cuda, 0 if not
 
 # Here one can modify parameters of the experiment
 export ENVIRONMENT_DOCKER_ENV=${ENVIRONMENT_DOCKER_ENV:-"
---env LEARNING_RATE_IN=0.25
---env LEARNING_RATE_FINAL=0.0001
---env EPOCHS_NUMBER=300
---env SQ_BOND_DIM=7
---env SQ_BOND_DIM_TRAINING=8
---env TIME_STEPS=50
---env SAMPLES_NUMBER=1000
---env SAMPLES_NUMBER_TRAINING=10000
---env TOTAL_SAMPLES_NUMBER=1000000
---env LOCAL_CHOI_RANK=1
---env LOCAL_CHOI_RANK_TRAINING=4
+--env LEARNING_RATE_IN=0.25 \
+--env LEARNING_RATE_FINAL=0.0001 \
+--env EPOCHS_NUMBER=300 \
+--env SQ_BOND_DIM=7 \
+--env SQ_BOND_DIM_TRAINING=8 \
+--env TIME_STEPS=50 \
+--env SAMPLES_NUMBER=1000 \
+--env SAMPLES_NUMBER_TRAINING=10000 \
+--env TOTAL_SAMPLES_NUMBER=1000000 \
+--env LOCAL_CHOI_RANK=1 \
+--env LOCAL_CHOI_RANK_TRAINING=4 \
 --env SEED=42
 "}
 # -------------------------------------------------------------------------------------------------
@@ -36,21 +37,22 @@ else
 fi
 
 results_dir=${script_dir}/${NAME}
-sing_image=${script_dir}/${NAME}.simg
-image_result_dir=/lsqmbdp/shared_dir
-entrypoint_scipt=/lsqmbdp/src/entrypoint.sh
+simg_image=${script_dir}/${NAME}.simg
 image_name="luchnikovi/lsqmbdp.${cuda_flag}:latest"
+image_result_dir=/lsqmbdp/shared_dir
 
 mkdir -p ${results_dir}
 
-exec="singularity exec ${ENVIRONMENT_DOCKER_ENV} --bind ${results_dir}:${image_result_dir} ${run_flags} ${sing_image} . ${entrypoint_scipt}"
-exec_get_params="${exec} --get_params"
-exec_gen_rand_im="${exec} --gen_rand_im -n ${NAME}"
-exec_gen_samples="${exec} --gen_samples -n ${NAME}"
-exec_train_im="${exec} --train_im -n ${NAME}"
+exec_fn() {
+    singularity run \
+        --home /root \
+        --bind ${results_dir}:${image_result_dir} \
+        ${run_flags} \
+        ${ENVIRONMENT_DOCKER_ENV} \
+        ${simg_image} "$@"
+}
 
-
-if singularity build ${sing_image}  docker://${image_name} > /dev/null; then
+if singularity pull ${simg_image}  docker://${image_name}; then
     echo "lsqmbd sigularity image has been built"
 else
     echo "ERROR: Unable to build lsqmbd singularity image"
@@ -61,10 +63,10 @@ fi
 # Note, that you can modify any of them by setting the
 # corresponding environment variable in the docker container
 # https://stackoverflow.com/questions/30494050/how-do-i-pass-environment-variables-to-docker-containers
-${exec_get_params}
+exec_fn --get_params
 
 # generates a random influence matrix
-if ${exec_gen_rand_im}; then
+if exec_fn --gen_rand_im -n ${NAME}; then
     echo "Random IM is generated"
 else
     echo "ERROR: unable to generate a random IM"
@@ -72,7 +74,7 @@ else
 fi
 
 # generates samples (measurement outcomes) from this matrix
-if ${exec_gen_samples}; then
+if exec_fn --gen_samples -n ${NAME}; then
     echo "Measurement outcomes are generated"
 else
     echo "ERROR: Unable to generate measurement outcomes"
@@ -80,7 +82,7 @@ else
 fi
 
 # trains an influence matrix
-if ${exec_train_im}; then
+if exec_fn --train_im -n ${NAME}; then
     echo "Training is completed!"
 else
     echo "ERROR: training is interrupted by an error"
