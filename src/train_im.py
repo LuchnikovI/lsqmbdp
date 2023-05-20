@@ -78,7 +78,7 @@ def main():
     parser.add_argument('-n', '--name', default = f"random_im")
     args = parser.parse_args()
     # ---------------------------------------------------------------------------------
-    unknown_influence_matrix = _hdf2im(SCRIPT_PATH + "/../shared_dir/" + args.name)
+    unknown_influence_matrix = _hdf2im(SCRIPT_PATH + "/../shared_dir/" + args.name + "_gen")
     set_to_forward_canonical(unknown_influence_matrix)
     time_steps = len(unknown_influence_matrix)
     data = _hdf2data(SCRIPT_PATH + "/../shared_dir/" + args.name + "_data")
@@ -100,7 +100,7 @@ def main():
     lr = LEARNING_RATE_IN
     opt = RAdam(man, lr)
     opt_state = opt.init(params)
-    hf = h5py.File(SCRIPT_PATH + "/../shared_dir/" + args.name, 'a')
+    hf = h5py.File(SCRIPT_PATH + "/../shared_dir/" + args.name + "_trained", 'a')
     best_loss_val = jnp.finfo(jnp.float32).max
     for i in range(1, EPOCHS_NUMBER + 1):
         opt = RAdam(man, lr)
@@ -109,14 +109,17 @@ def main():
             loss_val, grads = _loss_and_grad(params, data_slice)
             grads = _av_grad(grads)
             params, opt_state = opt.update(grads, opt_state, params)
-            av_loss_val += loss_val
+            av_loss_val += loss_val.sum()
         key, subkey = split(key)
         data = permutation(subkey, data.reshape((-1, 2, time_steps)), False).reshape((*DATA_TAIL_SHAPE, 2, time_steps))
         lr *= DECAY_COEFF
         found_influence_matrix = params2im([ker[0] for ker in params], LOCAL_CHOI_RANK_TRAINING)
         if av_loss_val < best_loss_val:
             best_loss_val = av_loss_val
-            del hf["im"]
+            try:
+                del hf["im"]
+            except:
+                pass
             group = hf.create_group("im")
             for j, ker in enumerate(found_influence_matrix):
                 group.create_dataset(str(j), data=ker)

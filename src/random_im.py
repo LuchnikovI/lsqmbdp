@@ -26,7 +26,7 @@ def main():
     key = PRNGKey(SEED)
     _, subkey = split(key)
     influence_matrix = random_im(subkey, TIME_STEPS, LOCAL_CHOI_RANK, SQ_BOND_DIM)
-    hf = h5py.File(SCRIPT_PATH + "/../shared_dir/" + args.name, 'w')
+    hf = h5py.File(SCRIPT_PATH + "/../shared_dir/" + args.name + "_gen", 'w')
     group = hf.create_group("im")
     for i, ker in enumerate(influence_matrix):
         group.create_dataset(str(i), data=ker)

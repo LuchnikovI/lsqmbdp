@@ -46,7 +46,7 @@ def main():
     parser.add_argument('-n', '--name', default = f"random_im")
     args = parser.parse_args()
     # --------------------------------------------------------------------------------
-    influence_matrix = _hdf2im(SCRIPT_PATH + "/../shared_dir/" + args.name)
+    influence_matrix = _hdf2im(SCRIPT_PATH + "/../shared_dir/" + args.name + "_gen")
     par_im2sampler = pmap(im2sampler)
     sampler = par_im2sampler(influence_matrix)
     time_steps = len(sampler)
