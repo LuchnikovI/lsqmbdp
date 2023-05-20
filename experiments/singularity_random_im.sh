@@ -24,7 +24,7 @@ simg_image=${script_dir}/lsqmbdp.${cuda_flag}.simg  # full name of the singulari
 image_name=luchnikovi/lsqmbdp.${cuda_flag}:latest  # docker image name for uploading from the registry
 shared_dir=/lsqmbdp/shared_dir  # sharded dir inside the container
 
-iter_total_samples_number=(100000 10000000)
+iter_total_samples_number=(1000000 10000000)
 iter_time_steps=(50 25 75)
 iter_local_choi_rank=(1 2)
 iter_local_choi_rank_training=(4 16)
@@ -39,7 +39,7 @@ experiment() {
     --env LEARNING_RATE_FINAL=0.001 \
     --env EPOCHS_NUMBER=350 \
     --env SAMPLES_NUMBER=1000 \
-    --env SAMPLES_NUMBER_TRAINING=2500 \
+    --env SAMPLES_NUMBER_TRAINING=5000 \
     --env TOTAL_SAMPLES_NUMBER=$1 \
     --env TIME_STEPS=$2 \
     --env LOCAL_CHOI_RANK=$3 \
