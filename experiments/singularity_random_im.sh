@@ -24,7 +24,7 @@ simg_image=${script_dir}/lsqmbdp.${cuda_flag}.simg  # full name of the singulari
 image_name=luchnikovi/lsqmbdp.${cuda_flag}:latest  # docker image name for uploading from the registry
 shared_dir=/lsqmbdp/shared_dir  # sharded dir inside the container
 
-iter_total_samples_number=(1000000 10000000)
+iter_total_samples_number=(1500000 15000000)
 iter_time_steps=(50 25 75)
 iter_local_choi_rank=(1 2)
 iter_local_choi_rank_training=(4 16)
@@ -33,20 +33,20 @@ iter_sq_bond_dim_training=(8 6 10)
 
 # a function running an experiment
 experiment() {
-    export ENVIRONMENT_DOCKER_ENV=${ENVIRONMENT_DOCKER_ENV:-"
+    export ENVIRONMENT_DOCKER_ENV="
     --env SEED=42
     --env LEARNING_RATE_IN=0.25 \
     --env LEARNING_RATE_FINAL=0.001 \
     --env EPOCHS_NUMBER=350 \
     --env SAMPLES_NUMBER=1000 \
-    --env SAMPLES_NUMBER_TRAINING=5000 \
+    --env SAMPLES_NUMBER_TRAINING=2500 \
     --env TOTAL_SAMPLES_NUMBER=$1 \
     --env TIME_STEPS=$2 \
     --env LOCAL_CHOI_RANK=$3 \
     --env LOCAL_CHOI_RANK_TRAINING=$4 \
     --env SQ_BOND_DIM=$5 \
     --env SQ_BOND_DIM_TRAINING=$6 \
-    "}
+    "
     # -------------------------------------------------------------------------------------------------
 
     # a common part of all the paths specific for the experimen
