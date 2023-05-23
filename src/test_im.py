@@ -3,7 +3,13 @@
 from jax.random import KeyArray, PRNGKey, split
 import jax.numpy as jnp
 import pytest
-from im import random_im, im2phi, random_unitary_im
+from im import (
+    random_im,
+    im2phi,
+    random_unitary_im,
+    dynamics,
+    random_unitary_channel,
+)
 
 KEY = PRNGKey(42)
 
@@ -54,3 +60,24 @@ def test_random_unitary_im(
     phi = phi.reshape((dim * dim, dim * dim))
     assert (jnp.abs(phi - phi.conj().T) < ACC).all()
     assert (jnp.linalg.eigvalsh(phi) > -ACC).all()
+
+
+@pytest.mark.parametrize("subkey", split(KEY, 2))
+@pytest.mark.parametrize("time_steps", [1, 5])
+@pytest.mark.parametrize("local_choi_rank", [1, 3])
+@pytest.mark.parametrize("sqrt_bond_dim", [1, 5])
+def test_dynamics(
+        subkey: KeyArray,
+        time_steps: int,
+        local_choi_rank: int,
+        sqrt_bond_dim: int,
+):
+    """Tests correctness of density matrices calculated within dynamics simulation"""
+    subkeys = split(subkey, time_steps)
+    phis = [random_unitary_channel(2, subkey) for subkey in subkeys]
+    influance_matrix = random_unitary_im(subkey, time_steps, local_choi_rank, sqrt_bond_dim)
+    for dens in dynamics(influance_matrix, phis):
+        dens - dens.T.conj()
+        assert (jnp.abs(dens - dens.conj().T) < ACC).all()
+        assert (jnp.linalg.eigvalsh(dens) > -ACC).all()
+        assert jnp.abs(jnp.trace(dens) - 1.) < ACC
