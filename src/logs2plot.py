@@ -56,9 +56,12 @@ def main(argv):
             experiment.params[line[0]] = line[1]
             experiment.plot_label += str(line[0]) + " = " + str(line[1]) + ", "
         if isinstance(line, dict):
+            try:
+                experiment.learning_rate.append(line["LR"])
+                experiment.loss_value.append(line["Loss_value"])
+            except:
+                pass
             experiment.fidelity.append(line["Fidelity"])
-            experiment.loss_value.append(line["Loss_value"])
-            experiment.learning_rate.append(line["LR"])
             experiment.trace_dist.append(line["L1"])
         if line is None:
             experiments.append(experiment)
@@ -68,13 +71,14 @@ def main(argv):
         plt.title("\n".join(wrap(experiment.plot_label, 60)))
         color = 'tab:red'
         ax1.set_xlabel('Epoch number')
-        ax1.set_ylabel('Cosine similarity', color=color)
-        ax1.plot(experiment.fidelity, color=color)
+        ax1.plot(experiment.fidelity, '-', color=color)
+        ax1.plot(experiment.trace_dist, '--', color=color)
+        ax1.legend(["Cosine similarity", "Av. prediction accuracy (trace dist.)"])
         ax1.tick_params(axis='y', labelcolor=color)
         ax2 = ax1.twinx()
         color = 'tab:blue'
         ax2.set_ylabel('loss value', color=color)
-        ax2.plot(experiment.loss_value, color=color)
+        ax2.plot(range(1, len(experiment.loss_value) + 1), experiment.loss_value, color=color)
         ax2.tick_params(axis='y', labelcolor=color)
 
         fig.tight_layout()
