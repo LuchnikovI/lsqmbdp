@@ -24,22 +24,23 @@ simg_image=${script_dir}/lsqmbdp.${cuda_flag}.simg  # full name of the singulari
 image_name=luchnikovi/lsqmbdp.${cuda_flag}:latest  # docker image name for uploading from the registry
 shared_dir=/lsqmbdp/shared_dir  # sharded dir inside the container
 
-iter_total_samples_number=(1500000 15000000)
-iter_time_steps=(50 25 75)
-iter_local_choi_rank=(1 2)
-iter_local_choi_rank_training=(4 16)
+iter_total_samples_number=(1000000)
+iter_time_steps=(50)
+iter_local_choi_rank=(1)
+iter_local_choi_rank_training=(4)
 iter_sq_bond_dim=(7)
-iter_sq_bond_dim_training=(8 6 10)
+iter_sq_bond_dim_training=(8)
 
 # a function running an experiment
 experiment() {
     export ENVIRONMENT_DOCKER_ENV="
     --env SEED=42
     --env LEARNING_RATE_IN=0.25 \
-    --env LEARNING_RATE_FINAL=0.001 \
-    --env EPOCHS_NUMBER=350 \
+    --env LEARNING_RATE_FINAL=0.01 \
+    --env EPOCHS_NUMBER=300 \
     --env SAMPLES_NUMBER=1000 \
     --env SAMPLES_NUMBER_TRAINING=2500 \
+    --env TEST_TRAJECTORIES_NUMBER=1000 \
     --env TOTAL_SAMPLES_NUMBER=$1 \
     --env TIME_STEPS=$2 \
     --env LOCAL_CHOI_RANK=$3 \
@@ -78,13 +79,13 @@ EOF
     }
 
     if [[ -f ${simg_image} ]]; then
-        echo "lsqmbd sigularity image is found"
+        echo "# lsqmbd sigularity image is found"
     else
-        echo "lsqmbd sigularity image has not been found, building..."
+        echo "# lsqmbd sigularity image has not been found, building..."
         if singularity pull ${simg_image}  docker://${image_name}; then
-            echo "lsqmbd sigularity image has been built"
+            echo "# lsqmbd sigularity image has been built"
         else
-            echo "ERROR: Unable to build lsqmbd singularity image"
+            echo "# ERROR: Unable to build lsqmbd singularity image"
             exit 1
         fi
     fi
@@ -93,31 +94,28 @@ EOF
     # Note, that you can modify any of them by setting the
     # corresponding environment variable in the docker container
     # https://stackoverflow.com/questions/30494050/how-do-i-pass-environment-variables-to-docker-containers
-    echo "Starting experiment with the following set of parameters:"
+    echo "# Starting experiment with the following set of parameters:"
     exec_fn --get_params
 
     # generates a random influence matrix
     if exec_fn --gen_rand_im -n ${experimet_specific_name}/im; then
-        echo "Random IM is generated"
+        echo "# Random IM is generated"
     else
-        echo "ERROR: unable to generate a random IM"
-        exit 1
+        echo "# ERROR: unable to generate a random IM"
     fi
 
     # generates samples (measurement outcomes) from this matrix
     if exec_fn --gen_samples -n ${experimet_specific_name}/im; then
-        echo "Measurement outcomes are generated"
+        echo "# Measurement outcomes are generated"
     else
-        echo "ERROR: Unable to generate measurement outcomes"
-        exit 1
+        echo "# ERROR: Unable to generate measurement outcomes"
     fi
 
     # trains an influence matrix
     if exec_fn --train_im -n ${experimet_specific_name}/im; then
-        echo "Training is completed!"
+        echo "// Training is completed!"
     else
-        echo "ERROR: training is interrupted by an error"
-        exit 1
+        echo "// ERROR: training is interrupted by an error"
     fi
 }
 
