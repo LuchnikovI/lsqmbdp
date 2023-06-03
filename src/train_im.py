@@ -20,7 +20,8 @@ from im import (
     InfluenceMatrixParameters,
     InfluenceMatrix,
     params2im,
-    random_unitary_params,
+    # random_unitary_params,
+    random_params,
     dynamics,
     random_unitary_channel,
 )
@@ -103,7 +104,7 @@ def par_trace_dist(
 
 par_dynamics = pmap(vmap(dynamics, in_axes=(None, 0)), in_axes=(None, 0))
 
-par_random_unitary_params = pmap(random_unitary_params, static_broadcasted_argnums=(1, 2, 3))
+par_random_unitary_params = pmap(random_params, static_broadcasted_argnums=(1, 2, 3))
 
 
 def main():
