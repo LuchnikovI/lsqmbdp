@@ -27,6 +27,17 @@ def test_random_im(
 ):
     """Tests random_im function by building an explicit channel and testing its properties"""
     influance_matrix = random_im(subkey, time_steps, local_choi_rank, sqrt_bond_dim)
+    right_bonds_sq = (len(influance_matrix) - 2) * [sqrt_bond_dim] + [1]
+    left_bonds_sq = (len(influance_matrix) - 1) * [sqrt_bond_dim]
+    for ker, left_bond_sq, right_bond_sq in zip(influance_matrix[1:], left_bonds_sq, right_bonds_sq):
+        ker = ker.reshape((left_bond_sq, left_bond_sq, 2, 2, 2, 2, right_bond_sq, right_bond_sq))
+        ker = ker.transpose((0, 2, 4, 6, 1, 3, 5, 7))
+        ker = ker.reshape((left_bond_sq * right_bond_sq * 4, left_bond_sq * right_bond_sq * 4))
+        eigvalsh = jnp.linalg.eigvalsh(ker)
+        print(eigvalsh)
+        assert (jnp.abs(ker - ker.conj().T) < ACC).all()
+        assert (eigvalsh > -ACC).all()
+        assert (eigvalsh > ACC).sum() == local_choi_rank
     phi = im2phi(influance_matrix)
     dim = 2 ** time_steps
     assert phi.shape == (dim, dim, dim, dim)
