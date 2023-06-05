@@ -18,17 +18,24 @@ def main(argv):
     dynamics_group = hf_prediction["dynamics"]
     exact = dynamics_group["exact"]
     predicted = dynamics_group["predicted"]
+    id_im = dynamics_group["id_im"]
     fig, ax = plt.subplots(nrows=3, ncols=1)
     ax[0].plot(np.tensordot(exact, sx, axes=[[3, 4], [1, 0]])[0, 0], 'b-')
     ax[0].plot(np.tensordot(predicted, sx, axes=[[3, 4], [1, 0]])[0, 0], 'b:')
+    ax[0].plot(np.tensordot(id_im, sx, axes=[[3, 4], [1, 0]])[0, 0], 'k--')
+    ax[0].set_ylim(top=1.1, bottom=-1.1)
     ax[0].set_xticks([], [])
     ax[0].set_ylabel(r'$\langle x\rangle$')
     ax[1].plot(np.tensordot(exact, sy, axes=[[3, 4], [1, 0]])[0, 0], 'b-')
     ax[1].plot(np.tensordot(predicted, sy, axes=[[3, 4], [1, 0]])[0, 0], 'b:')
+    ax[1].plot(np.tensordot(id_im, sy, axes=[[3, 4], [1, 0]])[0, 0], 'k--')
+    ax[1].set_ylim(top=1.1, bottom=-1.1)
     ax[1].set_xticks([], [])
     ax[1].set_ylabel(r'$\langle y\rangle$')
     ax[2].plot(np.tensordot(exact, sz, axes=[[3, 4], [1, 0]])[0, 0], 'b-')
     ax[2].plot(np.tensordot(predicted, sz, axes=[[3, 4], [1, 0]])[0, 0], 'b:')
+    ax[2].plot(np.tensordot(id_im, sz, axes=[[3, 4], [1, 0]])[0, 0], 'k--')
+    ax[2].set_ylim(top=1.1, bottom=-1.1)
     ax[2].set_ylabel(r'$\langle z\rangle$')
     ax[2].set_xlabel(r'${\rm Time}$')
     plt.show()
