@@ -1,3 +1,7 @@
 unsorted
 *.simg
 __pycache__
+/src/plot_prediction.py
+/src/logs2plot.py
+/src/hdf5_converter.py
+/src/logs_grammar.lark

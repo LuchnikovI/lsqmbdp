@@ -1,6 +1,9 @@
 /.pytest_cache
 /src/__pycache__
+/src/hdf5_converter.py
 /.mypy_cache
 unsorted
 *.simg
 im_*
+*.h5
+log_*
