@@ -24,6 +24,7 @@ from im import (
     random_params,
     dynamics,
     random_unitary_channel,
+    id_im,
 )
 from mpa import set_to_forward_canonical, mpa_log_dot
 
@@ -86,12 +87,26 @@ def par_dynamics_prediction(
         influence_matrix: InfluenceMatrix,
         trained_influence_matrix: InfluenceMatrix,
         subkey: KeyArray,
-) -> Tuple[Array, Array]:
+) -> Tuple[Array, Array, Array]:
+    id_influence_matrix = id_im(len(influence_matrix))
     subkeys = split(subkey, len(influence_matrix))
     phis = [random_unitary_channel(2, subkey) for subkey in subkeys]
     density_matrices = dynamics(influence_matrix, phis)
     predicted_density_matrices = dynamics(trained_influence_matrix, phis)
-    return jnp.array(density_matrices), jnp.array(predicted_density_matrices)
+    id_im_density_matrices = dynamics(id_influence_matrix, phis)
+    return jnp.array(density_matrices), jnp.array(predicted_density_matrices), jnp.array(id_im_density_matrices)
+
+
+def dynamics_prediction_uncontrolled(
+        influence_matrix: InfluenceMatrix,
+        trained_influence_matrix: InfluenceMatrix,
+) -> Tuple[Array, Array, Array]:
+    id_influence_matrix = id_im(len(influence_matrix))
+    phis = len(influence_matrix) * [jnp.eye(4, dtype=jnp.complex64)]
+    density_matrices = dynamics(influence_matrix, phis)
+    predicted_density_matrices = dynamics(trained_influence_matrix, phis)
+    id_im_density_matrices = dynamics(id_influence_matrix, phis)
+    return jnp.array(density_matrices), jnp.array(predicted_density_matrices), jnp.array(id_im_density_matrices)
 
 
 @partial(pmap, in_axes=0, axis_name='i')
@@ -152,7 +167,7 @@ def main():
         )
     )
 
-    # trining loop
+    # training loop
     for i in range(1, EPOCHS_NUMBER + 1):
         opt = RAdam(man, lr)
         av_loss_val = 0.
@@ -165,7 +180,21 @@ def main():
         data = permutation(subkey, data.reshape((-1, 2, time_steps)), False).reshape((*DATA_TAIL_SHAPE, 2, time_steps))
         lr *= DECAY_COEFF
         found_influence_matrix = params2im([ker[0] for ker in params], LOCAL_CHOI_RANK_TRAINING)
-        density_matrices = par_dynamics_prediction(unknown_influence_matrix, found_influence_matrix, subkeys)
+        exact, predicted, id_im = par_dynamics_prediction(unknown_influence_matrix, found_influence_matrix, subkeys)
+        uncontrolled_exact, uncontrolled_predicted, uncontrolled_id_im = \
+            dynamics_prediction_uncontrolled(unknown_influence_matrix, found_influence_matrix)
+        uncontrolled_exact, uncontrolled_predicted, uncontrolled_id_im = \
+            np.tile(uncontrolled_exact, (LOCAL_DEVICES_NUM, 1, 1, 1)), \
+            np.tile(uncontrolled_predicted, (LOCAL_DEVICES_NUM, 1, 1, 1)), \
+            np.tile(uncontrolled_id_im, (LOCAL_DEVICES_NUM, 1, 1, 1))
+        uncontrolled_exact, uncontrolled_predicted, uncontrolled_id_im = \
+            uncontrolled_exact[:, jnp.newaxis], \
+            uncontrolled_predicted[:, jnp.newaxis], \
+            uncontrolled_id_im[:, jnp.newaxis]
+        exact = jnp.concatenate([uncontrolled_exact, exact], axis=1)
+        predicted = jnp.concatenate([uncontrolled_predicted, predicted], axis=1)
+        id_im = jnp.concatenate([uncontrolled_id_im, id_im], axis=1)
+        density_matrices = (exact, predicted, id_im)
         if av_loss_val < best_loss_val:
             best_loss_val = av_loss_val
             try:
@@ -177,6 +206,7 @@ def main():
             dynamics_group = hf_prediction.create_group("dynamics")
             dynamics_group.create_dataset("exact", data=density_matrices[0])
             dynamics_group.create_dataset("predicted", data=density_matrices[1])
+            dynamics_group.create_dataset("id_im", data=density_matrices[2])
             for j, ker in enumerate(found_influence_matrix):
                 im_group.create_dataset(str(j), data=ker)
         set_to_forward_canonical(found_influence_matrix)
