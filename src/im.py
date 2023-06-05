@@ -148,6 +148,18 @@ def random_unitary_im(
     return kers
 
 
+def id_im(time_steps: int):
+    """Generates an Influance Matrix that does not affect dynamics
+    of the system (identity influence matrix).
+    Args:
+        time_steps: number of time steps
+    Returns: the identity influence matrix
+    """
+
+    kers = time_steps * [jnp.eye(4, dtype=jnp.complex64).reshape((1, 2, 2, 2, 2, 1))]
+    return kers
+
+
 def im2phi(
         influence_matrix: InfluenceMatrix,
 ) -> Array:
