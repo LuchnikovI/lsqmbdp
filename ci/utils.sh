@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ci_utils_script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+ci_scripts_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 export USE_CUDA=${USE_CUDA:-0}
 export LOG_LEVELS=${LOG_LEVELS:-'DEBUG INFO WARNING ERROR'}
@@ -11,6 +11,13 @@ export CUDA_VERSION=${CUDA_VERSION:-'11.8.0'}
 export CUDNN_MAJOR_VERSION=${CUDNN_MAJOR_VERSION:-'8'}
 
 export CUDA_MAJOR_VERSION="$(echo ${CUDA_VERSION} | grep -oP "[0-9]+" | head -1)"
+
+# checking cuda flag
+if [[ ${USE_CUDA} == 1 ]]; then
+    export IMAGE_NAME="${ci_scripts_dir}/lsqmbdp.cuda"
+else
+    export IMAGE_NAME="${ci_scripts_dir}/lsqmbdp.cpu"
+fi
 
 # -------------------------------------------------------------------------------------------
 
@@ -50,5 +57,12 @@ log() {
     esac
     color_end='\033[0m'
 
-    printf "${ts} ${color_start}${severity}${color_end} [${module}]: ${color_start}$*${color_end}\n" >&2
+    printf "# ${ts} ${color_start}${severity}${color_end} [${module}]: ${color_start}$*${color_end}\n" >&2
+}
+
+check_exit_code() {
+    if [[ $1 -ne 0 ]]; then
+        log ERROR $2
+        exit 1
+    fi
 }
