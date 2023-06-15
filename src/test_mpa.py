@@ -91,7 +91,7 @@ def test_dot_and_forward_canonical(
         right_bond = ker.shape[-1]
         ker = ker.reshape((left_bond, -1, right_bond))
         kerker = jnp.tensordot(ker, ker.conj(), axes=[[0, 1], [0, 1]])
-        assert((jnp.abs(kerker - jnp.eye(kerker.shape[0])) < ACC).all())
+        assert (jnp.abs(kerker - jnp.eye(kerker.shape[0])) < ACC).all()
 
 
 @pytest.mark.parametrize("subkey", split(KEY, 2))
