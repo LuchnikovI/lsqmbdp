@@ -31,19 +31,21 @@ From: ${base_image}
     chmod +x "$(dirname ${script_dir})/src/gen_samples.py"
     chmod +x "$(dirname ${script_dir})/src/random_im.py"
     chmod +x "$(dirname ${script_dir})/src/train_im.py"
+    chmod +x "$(dirname ${script_dir})/src/plot_logs.py"
+    chmod +x "$(dirname ${script_dir})/src/plot_coupled_spins_dynamics.py"
+    chmod +x "$(dirname ${script_dir})/src/preproc.py"
 
 %post
-    DEBIAN_FRONTEND=noninteractive apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common curl&& \
-    DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:deadsnakes/ppa && \
-    DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common curl
+    DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:deadsnakes/ppa
+    DEBIAN_FRONTEND=noninteractive apt-get update
     DEBIAN_FRONTEND=noninteractive apt install -y git python3.10 python3-pip
     curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
-    python3.10 -m pip install --upgrade pip && \
-    python3.10 -m pip install -U setuptools && \
-    python3.10 -m pip install numpy pytest -U mypy pylint hydra-core \
-    chex argparse h5py pyyaml git+https://github.com/LuchnikovI/qgoptax/ \
-    ${jax_install}
+    python3.10 -m pip install --upgrade pip
+    python3.10 -m pip install -U setuptools
+    python3.10 -m pip install numpy pytest -U mypy scipy pylint hydra-core matplotlib \
+    chex argparse h5py pyyaml git+https://github.com/LuchnikovI/qgoptax/ ${jax_install}
 
 %runscript
     "$(dirname "${script_dir}")/src/entrypoint.sh \$@"
