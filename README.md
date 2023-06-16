@@ -1,9 +1,24 @@
 LSQMBDP stands for large scale quantum many body data processing
 
-## How to run tests on a CPU
-`./ci/run_ci.sh`
+## Prerequisites
 
-## How to run experiments on a CUDA server
-1. Inspect a corresponding script from the experiments directory, modify it if necessary;
-2. Move this script to a server;
-3. Run it.
+One needs to have a Singularity(Apptainer) container system installed on your computer (HPC cluster).
+
+## Quick start
+
+To run an experiment with either random or external influence matrix:
+1. create your experiment config in either `./experiments/configs/random_im` or `./experiments/configs/physical_im` directory, one can use `default.yaml` config as a template;
+2. if you run an experiment with an external influence matrix, put the matrix inside `./experiments/ims` directory, and reflect its name in the corresponding field in the config;
+3. run an experiment script `./experiments/random_im.sh --config <config_name>.yaml` or `./experiments/physical_im.sh --config <config_name>.yaml`, to utilize all nvidia gpus of the system set the following env. variable `USE_CUDA=1`
+
+If you run a script for the first time, it automatically creates a singularity image with all the dependencies and runs all the experiments inside this environment.
+Results of an experiment are stored in `./experiments/output`.
+
+## Cli interface
+Experiment scripts use a cli tool `./ci/runner.sh` that covers everything. To get a help message of how to use the cli tool, run `./ci/runner.sh --help`
+
+## How to plot some results
+1. to plot learning curves use `./ci/runner plot_logs`, to get a help message run `./ci/runner.sh plot_logs --help`;
+2. to plot dynamics of coupled spins interacted with influence matrices us `./ci/runner.sh plot_coupled_spins_dynamics`, to get a help message run `./ci/runner.sh plot_coupled_spins_dynamics --help`.
+
+## How to run tests
