@@ -18,7 +18,7 @@ Results of an experiment are stored in `./experiments/output/<experiment_type>/<
 Experiment scripts use a cli tool `./ci/runner.sh` that covers everything. To get a help message of how to use the cli tool, run `./ci/runner.sh --help`
 
 ## How to plot some results
-1. to plot learning curves use `./ci/runner plot_logs`, to get a help message run `./ci/runner.sh plot_logs --help`;
+1. to plot learning curves use `./ci/runner.sh plot_logs`, to get a help message run `./ci/runner.sh plot_logs --help`;
 2. to plot dynamics of coupled spins interacting with influence matrices use `./ci/runner.sh plot_coupled_spins_dynamics`, to get a help message run `./ci/runner.sh plot_coupled_spins_dynamics --help`.
 
 ## How to run tests
