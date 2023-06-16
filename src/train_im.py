@@ -1,4 +1,5 @@
 #!/usr/bin/python3.10
+#  type: ignore
 
 # pylint: skip-file
 

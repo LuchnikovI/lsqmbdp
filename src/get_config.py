@@ -3,7 +3,7 @@
 # pylint: skip-file
 
 import hydra
-import yaml
+import yaml # type: ignore
 from omegaconf import DictConfig, OmegaConf
 
 @hydra.main(version_base=None, config_path="../experiments/configs")

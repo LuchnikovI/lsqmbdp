@@ -4,7 +4,7 @@
 
 import os
 import matplotlib.pyplot as plt # type: ignore
-import yaml
+import yaml # type: ignore
 from argparse import ArgumentParser
 
 #plt.rcParams.update({
