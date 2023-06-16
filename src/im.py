@@ -273,7 +273,7 @@ def dynamics(
     return rhos
 
 
-def kondo_dynamics(
+def coupled_dynamics(
         influence_matrix1: InfluenceMatrix,
         influence_matrix2: InfluenceMatrix,
         int_gate: Array,

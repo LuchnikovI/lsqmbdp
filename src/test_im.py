@@ -8,7 +8,7 @@ from im import (
     im2phi,
     random_unitary_im,
     dynamics,
-    kondo_dynamics,
+    coupled_dynamics,
     random_unitary_channel,
     swap_and_phi_im,
 )
@@ -129,13 +129,13 @@ def test_dynamics(
 @pytest.mark.parametrize("time_steps", [1, 5])
 @pytest.mark.parametrize("local_choi_rank", [1, 3])
 @pytest.mark.parametrize("sqrt_bond_dim", [1, 5])
-def test_kondo_dynamics(
+def test_coupled_dynamics(
         subkey: KeyArray,
         time_steps: int,
         local_choi_rank: int,
         sqrt_bond_dim: int,
 ):
-    """Tests kondo dynamics"""
+    """Tests coupled dynamics"""
     subkeys = split(subkey, 3)
     influance_matrix1 = random_im(subkeys[0], time_steps, local_choi_rank, sqrt_bond_dim)
     influance_matrix2 = random_im(subkeys[1], time_steps, local_choi_rank, sqrt_bond_dim)
@@ -143,7 +143,7 @@ def test_kondo_dynamics(
     phi = phi.reshape((2, 2, 2, 2, 2, 2, 2, 2))
     phi = phi.transpose((0, 2, 1, 3, 4, 6, 5, 7))
     phi = phi.reshape((4, 4, 4, 4))
-    for dens in kondo_dynamics(influance_matrix1, influance_matrix2, phi):
+    for dens in coupled_dynamics(influance_matrix1, influance_matrix2, phi):
         assert (jnp.abs(dens - dens.conj().T) < ACC).all()
         assert (jnp.linalg.eigvalsh(dens) > -ACC).all()
         assert jnp.abs(jnp.trace(dens) - 1.) < ACC
