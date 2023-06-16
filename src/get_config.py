@@ -3,11 +3,14 @@
 # pylint: skip-file
 
 import hydra
+import yaml
 from omegaconf import DictConfig, OmegaConf
 
 @hydra.main(version_base=None, config_path="../experiments/configs")
 def main(cfg: DictConfig) -> None:
-    print(OmegaConf.to_yaml(cfg))
+    (experiment_type, conf) = list(cfg.items())[0]
+    print(yaml.dump({"experiment_type": experiment_type}))
+    print(OmegaConf.to_yaml(conf))
 
 if __name__ == "__main__":
     main()
