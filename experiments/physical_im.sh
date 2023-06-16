@@ -19,8 +19,8 @@ EOF
 experiment() {
     local config_flag
     local output_dir
-    config_flag="+random_im=$1"
-    output_dir="${script_dir}/output/random_im/$1/$(date "+%Y-%m-%d_%H:%M:%S%z")"
+    config_flag="+physical_im=$1"
+    output_dir="${script_dir}/output/physical_im/$1/$(date "+%Y-%m-%d_%H:%M:%S%z")"
     logs="${output_dir}/logs.yaml"
     mkdir -p ${output_dir}
 
@@ -30,9 +30,9 @@ experiment() {
     $runner get_config hydra.run.dir="${output_dir}" "${config_flag}" "${@}" | tee -a $logs
     check_exit_code $? "Unable to inspect a config"
 
-    log INFO "Generating a random influence matrix..."
-    $runner random_im hydra.run.dir="${output_dir}" "${config_flag}" "${@}" | tee -a $logs
-    check_exit_code $? "Unable to inspect a config"
+    log INFO "Preprocess an externel influence matrix..."
+    $runner preproc hydra.run.dir="${output_dir}" "${config_flag}" "${@}" | tee -a $logs
+    check_exit_code $? "Unable to preprocess an externel influence matrix"
 
     log INFO "Generating a dataset..."
     $runner gen_samples hydra.run.dir="${output_dir}" "${config_flag}" "${@}" | tee -a $logs
