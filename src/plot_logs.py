@@ -14,7 +14,7 @@ from argparse import ArgumentParser
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--path', help = "path to the logs.yaml file", required = True)
+    parser.add_argument('--path', help = "path to the logs.yaml file (`./experiments/output/<experiment_type>/<config_name>/<timestamp>/logs.yaml`)", required = True)
     args = parser.parse_args()
     with open(args.path, "r") as log_file:
         try:

@@ -21,12 +21,12 @@ def main():
     parser.add_argument(
         '--im_path1', '-p1',
         required=True,
-        help="path to a directory with all the data for the influence matrix coupled with the first spin",
+        help="path to a directory with all the data for the influence matrix coupled with the first spin (`./experiments/output/<experiment_type>/<config_name>/<timestamp>`)",
     )
     parser.add_argument(
         '--im_path2', '-p2',
         required=True,
-        help="path to a directory with all the data for the influence matrix coupled with the second spin",
+        help="path to a directory with all the data for the influence matrix coupled with the second spin (`./experiments/output/<experiment_type>/<config_name>/<timestamp>`)",
     )
     parser.add_argument(
         '--xx_int', '-x',
