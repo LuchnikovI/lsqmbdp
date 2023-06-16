@@ -5,14 +5,17 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 get_help() {
 cat << EOF
 Usage:
-  --test:      runs tests;
-  --typecheck: runs static code analysis;
-  --lint:      runs linter;
-  --help:      drops this message;
-  gen_rand_im: generates a random IM and saves it (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
-  gen_samples: generates samples from IM (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
-  train_im:    trains IM on saved samples (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
-  get_config:  prints experiment config (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/").
+  --test:                      runs tests;
+  --typecheck:                 runs static code analysis;
+  --lint:                      runs linter;
+  --help:                      drops this message;
+  gen_rand_im:                 generates a random IM and saves it (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
+  gen_samples:                 generates samples from IM (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
+  train_im:                    trains IM on saved samples (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
+  get_config:                  prints experiment config (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
+  preproc:                     preprocess an externel influence matrix and save it in the output dir (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
+  plot_logs:                   make a plot from logs (use --help option to get usage)
+  plot_coupled_spins_dynamics: make a plot of coupled spins dynamics (use --help option to get usage)
 EOF
 }
 
@@ -30,7 +33,7 @@ case $1 in
   --help)
         get_help
     ;;
-  randandom_im)
+  random_im)
         shift
         "${script_dir}/random_im.py" "$@"
     ;;
@@ -45,6 +48,18 @@ case $1 in
   get_config)
         shift
         "${script_dir}/get_config.py" "$@"
+    ;;
+  plot_logs)
+        shift
+        "${script_dir}/plot_logs.py" "$@"
+    ;;
+  plot_coupled_spins_dynamics)
+        shift
+        "${script_dir}/plot_coupled_spins_dynamics.py" "$@"
+    ;;
+  preproc)
+        shift
+        "${script_dir}/preproc.py" "$@"
     ;;
   *)
         echo "Unknown option: '$1'"
