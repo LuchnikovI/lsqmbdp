@@ -11,7 +11,17 @@ from sampler import log_prob
 
 
 def _hdf2im(output_dir: str) -> InfluenceMatrix:
-    with h5py.File(output_dir +"/im_gen") as f:
+    with h5py.File(output_dir +"/im_exact") as f:
+        def idx2ker(idx: int):
+            ker = jnp.array(f["im"][str(idx)])
+            return ker
+        kers_num = len(f["im"].values())
+        influence_matrix = [idx2ker(idx) for idx in range(kers_num)]
+    return influence_matrix
+
+
+def _hdf2trained_im(output_dir: str) -> InfluenceMatrix:
+    with h5py.File(output_dir +"/im_trained") as f:
         def idx2ker(idx: int):
             ker = jnp.array(f["im"][str(idx)])
             return ker
@@ -24,7 +34,7 @@ def _im2hdf(
         influence_matrix: InfluenceMatrix,
         output_dir: str,
 ):
-    with h5py.File(output_dir + "/im_gen", 'w') as f:
+    with h5py.File(output_dir + "/im_exact", 'w') as f:
         group = f.create_group("im")
         for i, ker in enumerate(influence_matrix):
             group.create_dataset(str(i), data=ker)
