@@ -47,6 +47,52 @@ def random_unitary_params(
     return params
 
 
+def random_slow_params(
+        subkey: KeyArray,
+        time_steps: int,
+        local_choi_rank: int,
+        sqrt_bond_dim: int,
+        eps: float,
+) -> InfluenceMatrixParameters:
+    """Generates isometric matrices that parametrize an influence matrix.
+    Those isometric matrices lead to Choi rank almost 1 up to small noise.
+    Args:
+        subkey: jax random seed
+        time_steps: number of time steps
+        local_choi_rank: local choi rank
+        sqrt_bond_dim: square root of bond dimension
+        eps: noise std
+    Returns: Influence matrix parameters"""
+
+    def gen_random_isom(
+            subkey: KeyArray,
+            out_dim: int,
+            inp_dim: int,
+            local_choi_rank: int,
+    ) -> Array:
+        #ker = normal(subkey, (int(out_dim / local_choi_rank), inp_dim, 2))
+        #ker = ker[..., 0] + 1j * ker[..., 1]
+        #ker, _ = jnp.linalg.qr(ker)
+        ker = jnp.eye(inp_dim, dtype=jnp.complex64)
+        if (out_dim / local_choi_rank) > inp_dim:
+            aux = jnp.zeros((int(out_dim / local_choi_rank) - inp_dim, inp_dim))
+            ker = jnp.concatenate([aux, ker], axis=0)
+        aux = jnp.zeros((local_choi_rank,))
+        aux = aux.at[0].set(1.)
+        ker = jnp.tensordot(aux, ker, axes=0)
+        ker = ker.reshape((out_dim, inp_dim))
+        #_, subkey = split(subkey)
+        ker = ker + eps * normal(subkey, ker.shape)
+        ker, _ = jnp.linalg.qr(ker)
+        return ker
+    out_dims = time_steps * [2 * sqrt_bond_dim * local_choi_rank]
+    inp_dims = (time_steps - 1) * [2 * sqrt_bond_dim] + [2]
+    subkeys = split(subkey, time_steps)
+    params = [gen_random_isom(subkey, out_dim, inp_dim, local_choi_rank)\
+              for subkey, out_dim, inp_dim in zip(subkeys, out_dims, inp_dims)]
+    return params
+
+
 def random_params(
         subkey: KeyArray,
         time_steps: int,
@@ -160,6 +206,23 @@ def id_im(time_steps: int):
     return kers
 
 
+def swap_and_phi_im(time_steps: int, phi: Array):
+    """Generates a SWAP and transform influence matrix. Testing the only purpose of
+    this influence matrix.
+    Args:
+        time_steps: number of time steps
+    Returns: the SWAP and transform influence matrix
+    """
+
+    swap_phi = jnp.tensordot(jnp.eye(4), jnp.eye(4), axes=0).reshape((2, 2, 2, 2, 2, 2, 2, 2))
+    swap_phi = swap_phi.transpose((0, 4, 1, 5, 2, 6, 3, 7))
+    swap_phi = swap_phi.reshape((4, 2, 2, 2, 2, 4))
+    swap_phi = jnp.tensordot(phi, swap_phi, axes=1)
+    right = jnp.tensordot(swap_phi, jnp.eye(2).reshape((-1,)), axes=1)[..., jnp.newaxis]
+    left = jnp.tensordot(jnp.eye(2).reshape((-1,)), swap_phi, axes=1)[jnp.newaxis]
+    return [left] + (time_steps - 2) * [swap_phi] + [right]
+
+
 def im2phi(
         influence_matrix: InfluenceMatrix,
 ) -> Array:
@@ -176,6 +239,7 @@ def im2phi(
         phi = phi.reshape((new_dim, new_dim, new_dim, new_dim, -1))
     return phi[..., 0]
 
+
 def dynamics(
         influence_matrix: InfluenceMatrix,
         phis: List[Array],
@@ -186,22 +250,74 @@ def dynamics(
         phis: quantum channels applied to the system each time step
     Returns: density matrices of the system"""
 
-    def trace_out(ker: Array, left: Array) -> Array:
+    def trace_out(left: Array, ker: Array) -> Array:
         return jnp.tensordot(left, jnp.einsum("qiijjp->qp", ker), axes=1)
     left_states = [jnp.ones((1,))]
     for ker in influence_matrix[:-1]:
-        left_state = trace_out(ker, left_states[-1])
+        left_state = trace_out(left_states[-1], ker)
         left_state /= jnp.linalg.norm(left_state)
         left_states.append(left_state)
     right_state = jnp.array([[1, 0, 0, 0]], dtype=jnp.complex64)
-    rhos = []
+    rhos = [right_state.reshape((2, 2))]
     for ker, phi in zip(reversed(influence_matrix), reversed(phis)):
         left_state = left_states.pop()
-        lb, _, _, _, _, rb = ker.shape
-        ker = ker.reshape((lb, 4, 4, rb))
+        left_bond, _, _, _, _, right_bond = ker.shape
+        ker = ker.reshape((left_bond, 4, 4, right_bond))
         right_state = jnp.tensordot(phi, right_state, axes=[[1], [1]])
         right_state = jnp.tensordot(ker, right_state, axes=2)
         rho = jnp.tensordot(left_state, right_state, axes=1).reshape((2, 2))
+        norm = jnp.trace(rho)
+        rho /= norm
+        right_state /= norm
+        rhos.append(rho)
+    return rhos
+
+
+def coupled_dynamics(
+        influence_matrix1: InfluenceMatrix,
+        influence_matrix2: InfluenceMatrix,
+        int_gate: Array,
+) -> List[Array]:
+    """Computes dynamics of two coupled spins where each one is additionally
+    coupled with its own environment.
+    Args:
+        influence_matrix1: influence matrix coupled with the first spin
+        influence_matrix2: influence matrix coupled with the second spin
+        int_gate: gate describing interaction between spins
+    Returns:
+        list of density matrices of these two spins evolving in time"""
+
+    def trace_out(left: Array, ker: Array) -> Array:
+            return jnp.tensordot(left, jnp.einsum("qiijjp->qp", ker), axes=1)
+    left_states1 = [jnp.ones((1,))]
+    for ker in influence_matrix1[:-1]:
+        left_state = trace_out(left_states1[-1], ker)
+        left_state /= jnp.linalg.norm(left_state)
+        left_states1.append(left_state)
+    left_states2 = [jnp.ones((1,))]
+    for ker in influence_matrix2[:-1]:
+        left_state = trace_out(left_states2[-1], ker)
+        left_state /= jnp.linalg.norm(left_state)
+        left_states2.append(left_state)
+    right_state = jnp.array([
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+    ]).reshape((1, 4, 4, 1))
+    rhos = [right_state.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((4, 4))]
+    for ker1, ker2 in zip(reversed(influence_matrix1), reversed(influence_matrix2)):
+        left_state1 = left_states1.pop()
+        left_state2 = left_states2.pop()
+        left_bond1, _, _, _, _, right_bond1 = ker1.shape
+        ker1 = ker1.reshape((left_bond1, 4, 4, right_bond1))
+        left_bond2, _, _, _, _, right_bond2 = ker2.shape
+        ker2 = ker2.reshape((left_bond2, 4, 4, right_bond2))
+        right_state = jnp.einsum("jkqp,iqpl->ijkl", int_gate, right_state)
+        right_state = jnp.einsum("ijpq,qpkl->ijkl", ker1, right_state)
+        right_state = jnp.einsum("lkqp,ijqp->ijkl", ker2, right_state)
+        rho = jnp.einsum("q,p,qijp->ij", left_state1, left_state2, right_state)
+        rho = rho.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((4, 4))
         norm = jnp.trace(rho)
         rho /= norm
         right_state /= norm
@@ -218,10 +334,11 @@ def random_unitary_channel(
         sq_dim: Hilbert space dimension
         subkey: jax random seed
     Returns: quantum channel"""
-    u = normal(subkey, (sq_dim, sq_dim, 2))
-    u = u[..., 0] + 1j * u[..., 1]
-    u, _ = jnp.linalg.qr(u)
-    phi = jnp.tensordot(u, u.conj(), axes=0)
+
+    unitary = normal(subkey, (sq_dim, sq_dim, 2))
+    unitary = unitary[..., 0] + 1j * unitary[..., 1]
+    unitary, _ = jnp.linalg.qr(unitary)
+    phi = jnp.tensordot(unitary, unitary.conj(), axes=0)
     phi = phi.transpose((0, 2, 1, 3))
     phi = phi.reshape((sq_dim * sq_dim, sq_dim * sq_dim))
     return phi

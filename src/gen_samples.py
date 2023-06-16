@@ -2,71 +2,65 @@
 
 # pylint: skip-file
 
-import sys
-import os
-import h5py # type: ignore
+import logging
+logging.getLogger("jax._src.xla_bridge").addFilter(lambda _: False)
 import jax.numpy as jnp
-from argparse import ArgumentParser
 from jax.random import split, PRNGKey, categorical
 from jax import pmap, local_device_count, devices, device_put
 from sampler import gen_samples, im2sampler
-from im import InfluenceMatrix
+import yaml # type: ignore
+import hydra
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig
+from cli_utils import _hdf2im, _data2hdf
 
-SAMPLES_NUMBER = int(str(os.environ.get("SAMPLES_NUMBER")))
-TOTAL_SAMPLES_NUMBER = int(str(os.environ.get("TOTAL_SAMPLES_NUMBER")))
-SEED = int(str(os.environ.get("SEED")))
-SCRIPT_PATH = os.path.dirname(sys.argv[0])
-MAIN_CPU = devices("cpu")[0]
-LOCAL_DEVICES_NUM = local_device_count()
-SAMPLING_EPOCHS_NUM = int(TOTAL_SAMPLES_NUMBER / (SAMPLES_NUMBER * LOCAL_DEVICES_NUM))
-
-def _hdf2im(
-        path: str,
-) -> InfluenceMatrix:
-    with h5py.File(path) as f:
-        def idx2ker(idx: int):
-            ker = jnp.array(f["im"][str(idx)])
-            size = len(ker.shape)
-            ker = ker[jnp.newaxis]
-            ker = jnp.tile(ker, (LOCAL_DEVICES_NUM,) + size * (1,))
-            return ker
-        kers_num = len(f["im"].values())
-        influence_matrix = [idx2ker(idx) for idx in range(kers_num)]
-    return influence_matrix
+par_gen_samples = pmap(gen_samples, in_axes=(0, None, 0))
 
 
-par_im2sampler = pmap(im2sampler)
-
-
-par_gen_samples = pmap(gen_samples, in_axes=(0, 0, 0))
-
-
-def main():
-    parser = ArgumentParser()
-    parser.add_argument('-n', '--name', default = f"random_im")
-    args = parser.parse_args()
+@hydra.main(version_base=None, config_path="../experiments/configs")
+def main(cfg: DictConfig):
+    conf = list(cfg.items())[0][1]
+    batch_size = int(conf.dataset_generation_params.batch_size)
+    batches_number = int(conf.dataset_generation_params.batches_number)
+    seed = int(conf.seed)
+    output_dir=HydraConfig.get().run.dir
+    main_cpu = devices("cpu")[0]
+    local_devices_number = local_device_count()
+    device_samples_number = batch_size * batches_number
+    total_samples_number = batch_size * batches_number * local_devices_number
+    print(yaml.dump(
+        {
+            "machine_dependant_dataset_generation_params":
+                {
+                    "local_devices_number": local_devices_number,
+                    "device_samples_number": device_samples_number,
+                    "total_samples_number": total_samples_number,
+                }
+        },
+        width=float("inf"),
+    ))
     # --------------------------------------------------------------------------------
-    influence_matrix = _hdf2im(SCRIPT_PATH + "/../shared_dir/" + args.name + "_gen")
-    par_im2sampler = pmap(im2sampler)
-    sampler = par_im2sampler(influence_matrix)
+    influence_matrix = _hdf2im(output_dir)
+    sampler = im2sampler(influence_matrix)
     time_steps = len(sampler)
-    # ----------------------------------------------------------------------
-    key = PRNGKey(SEED)
+    # --------------------------------------------------------------------------------
+    key = PRNGKey(seed)
     key, _ = split(key)
     key, _ = split(key)
-    keys = split(key, SAMPLING_EPOCHS_NUM)
-    all_indices = device_put(jnp.zeros((0, time_steps), dtype=jnp.int32), device=MAIN_CPU)
-    all_samples = device_put(jnp.zeros((0, time_steps), dtype=jnp.int32), device=MAIN_CPU)
+    keys = split(key, batches_number)
+    all_indices = device_put(jnp.zeros((0, time_steps), dtype=jnp.int32), device=main_cpu)
+    all_samples = device_put(jnp.zeros((0, time_steps), dtype=jnp.int32), device=main_cpu)
     for key in keys:
         key, subkey = split(key)
-        indices = categorical(subkey, jnp.ones((16,)), shape=(LOCAL_DEVICES_NUM, SAMPLES_NUMBER, time_steps))
-        subkeys = split(key, LOCAL_DEVICES_NUM)
+        indices = categorical(subkey, jnp.ones((16,)), shape=(local_devices_number, batch_size, time_steps))
+        subkeys = split(key, local_devices_number)
         samples = par_gen_samples(subkeys, sampler, indices)
-        all_indices = jnp.concatenate([all_indices, device_put(indices, MAIN_CPU).reshape((-1, time_steps))])
-        all_samples = jnp.concatenate([all_samples, device_put(samples, MAIN_CPU).reshape((-1, time_steps))])
+        all_indices = jnp.concatenate([all_indices, device_put(indices, main_cpu).reshape((-1, time_steps))])
+        all_samples = jnp.concatenate([all_samples, device_put(samples, main_cpu).reshape((-1, time_steps))])
     data = jnp.concatenate([all_indices[:, jnp.newaxis], all_samples[:, jnp.newaxis]], axis=1)
-    with h5py.File(SCRIPT_PATH + "/../shared_dir/" + args.name + "_data", "w") as f:
-        f.create_dataset("data", data=data)
+    assert data.shape[0] == total_samples_number
+    _data2hdf(data, output_dir)
+
 
 if __name__ == '__main__':
     main()

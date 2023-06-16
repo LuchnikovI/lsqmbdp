@@ -2,35 +2,30 @@
 
 # pylint: skip-file
 
-import sys
-import os
-import h5py # type: ignore
-from argparse import ArgumentParser
-import jax.numpy as jnp
+import logging
+logging.getLogger("jax._src.xla_bridge").addFilter(lambda _: False)
 from im import random_im
 from jax.random import split, PRNGKey
+import hydra
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig
+from cli_utils import _im2hdf
 
 
-SQ_BOND_DIM = int(str(os.environ.get("SQ_BOND_DIM")))
-TIME_STEPS = int(str(os.environ.get("TIME_STEPS")))
-LOCAL_CHOI_RANK = int(str(os.environ.get("LOCAL_CHOI_RANK")))
-SEED = int(str(os.environ.get("SEED")))
-SCRIPT_PATH = os.path.dirname(sys.argv[0])
-
-
-def main():
-    parser = ArgumentParser()
-    parser.add_argument('-n', '--name', default = "random_im")
-    args = parser.parse_args()
+@hydra.main(version_base=None, config_path="../experiments/configs")
+def main(cfg: DictConfig):
+    conf = list(cfg.items())[0][1]
+    time_steps = int(conf.generated_im_params.time_steps)
+    sqrt_bond_dim = int(conf.generated_im_params.sqrt_bond_dim)
+    local_choi_rank = int(conf.generated_im_params.local_choi_rank)
+    seed = int(conf.seed)
+    output_dir=HydraConfig.get().run.dir
     # -----------------------------------------------------------------------------
-    key = PRNGKey(SEED)
+    key = PRNGKey(seed)
     _, subkey = split(key)
-    influence_matrix = random_im(subkey, TIME_STEPS, LOCAL_CHOI_RANK, SQ_BOND_DIM)
-    hf = h5py.File(SCRIPT_PATH + "/../shared_dir/" + args.name + "_gen", 'w')
-    group = hf.create_group("im")
-    for i, ker in enumerate(influence_matrix):
-        group.create_dataset(str(i), data=ker)
-    hf.close()
+    influence_matrix = random_im(subkey, time_steps, local_choi_rank, sqrt_bond_dim)
+    assert len(influence_matrix) == time_steps
+    _im2hdf(influence_matrix, output_dir)
 
 if __name__ == '__main__':
     main()
