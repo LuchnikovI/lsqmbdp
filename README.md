@@ -19,7 +19,7 @@ Experiment scripts use a cli tool `./ci/runner.sh` that covers everything. To ge
 
 ## How to plot some results
 1. to plot learning curves use `./ci/runner plot_logs`, to get a help message run `./ci/runner.sh plot_logs --help`;
-2. to plot dynamics of coupled spins interacting with influence matrices us `./ci/runner.sh plot_coupled_spins_dynamics`, to get a help message run `./ci/runner.sh plot_coupled_spins_dynamics --help`.
+2. to plot dynamics of coupled spins interacting with influence matrices use `./ci/runner.sh plot_coupled_spins_dynamics`, to get a help message run `./ci/runner.sh plot_coupled_spins_dynamics --help`.
 
 ## How to run tests
 `./ci/run_ci.sh` or `USE_CUDA=1 ./ci/run_ci.sh`
