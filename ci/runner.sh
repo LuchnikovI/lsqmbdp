@@ -8,7 +8,7 @@ entrypoint="$(dirname ${script_dir})/src/entrypoint.sh"
 . "${script_dir}/ensure_image.sh"
 
 if [[ ${USE_CUDA} == 1 ]]; then
-    singularity exec --nv "${IMAGE_NAME}.sif" "${entrypoint}" "$@"
+    singularity exec --cleanenv --nv "${IMAGE_NAME}.sif" "${entrypoint}" "$@"
 else
-    singularity exec "${IMAGE_NAME}.sif" "${entrypoint}" "$@"
+    singularity exec --cleanenv "${IMAGE_NAME}.sif" "${entrypoint}" "$@"
 fi

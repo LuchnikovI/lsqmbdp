@@ -23,3 +23,6 @@ Experiment scripts use a cli tool `./ci/runner.sh` that covers everything. To ge
 
 ## How to run tests
 `./ci/run_ci.sh` or `USE_CUDA=1 ./ci/run_ci.sh`
+
+## Notes for collaborators
+Do not clone it to the `scratch` directory on a cluster, clone it to `$HOME` instead, `scratch` is a symbolic link that leads to some problems while mapping it inside the container.
