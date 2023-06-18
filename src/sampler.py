@@ -84,8 +84,11 @@ def _log_prob(
         samples: Array,
         local_choi_dim: int,
 ) -> Array:
+    time_steps = indices.shape[0]
+    assert samples.shape[0] == time_steps
     state = jnp.ones((1, 1))
     log_abs = jnp.zeros((1,))
+    params = (time_steps - 1) * [params[0]] + [params[1]]
     for (ker, index, sample) in zip(params[::-1], indices[::-1], samples[::-1]):
         idx0, idx1 = jnp.unravel_index(index, (4, 4))
         smp0, smp1 = jnp.unravel_index(sample, (2, 2))

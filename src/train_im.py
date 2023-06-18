@@ -33,7 +33,7 @@ from cli_utils import (
     _learning_rate_update,
 )
 
-par_random_params = pmap(random_params, static_broadcasted_argnums=(1, 2, 3))
+par_random_params = pmap(random_params, static_broadcasted_argnums=(1, 2))
 
 
 @hydra.main(version_base=None, config_path="../experiments/configs")
@@ -79,7 +79,6 @@ def main(cfg: DictConfig):
     subkeys = jnp.tile(subkey, (local_devices_number, 1))
     params = par_random_params(
         subkeys,
-        time_steps,
         local_choi_rank,
         sqrt_bond_dim,
     )
@@ -90,7 +89,7 @@ def main(cfg: DictConfig):
     best_loss_val = jnp.finfo(jnp.float32).max
 
     # evaluates im before training
-    found_influence_matrix = params2im([ker[0] for ker in params], local_choi_rank)
+    found_influence_matrix = params2im([ker[0] for ker in params], time_steps, local_choi_rank)
     set_to_forward_canonical(found_influence_matrix)
     log_fidelity_half, _ = mpa_log_dot(unknown_influence_matrix, found_influence_matrix)
     fidelity = jnp.exp(2 * log_fidelity_half)
@@ -118,7 +117,7 @@ def main(cfg: DictConfig):
             av_loss_val += loss_val.sum()
         key, subkey = split(key)
         data = permutation(subkey, data.reshape((-1, 2, time_steps)), False).reshape((*data_tail_shape, 2, time_steps))
-        found_influence_matrix = params2im([ker[0] for ker in params], local_choi_rank)
+        found_influence_matrix = params2im([ker[0] for ker in params], time_steps, local_choi_rank)
         density_matrices = par_dynamics_prediction(unknown_influence_matrix, found_influence_matrix, subkeys)
         hf_trained = h5py.File(output_dir + "/im_trained", 'a')
         if av_loss_val < best_loss_val:

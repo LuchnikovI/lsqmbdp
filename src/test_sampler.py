@@ -16,7 +16,7 @@ KEY = PRNGKey(47)
 ACC = 1e-5
 
 @pytest.mark.parametrize("subkey", split(KEY, 2))
-@pytest.mark.parametrize("time_steps", [1, 5])
+@pytest.mark.parametrize("time_steps", [2, 5])
 @pytest.mark.parametrize("local_choi_rank", [2, 4])
 @pytest.mark.parametrize("sqrt_bond_dim", [1, 5])
 def test_im2sampler(
@@ -42,7 +42,7 @@ def test_im2sampler(
 
 
 @pytest.mark.parametrize("subkey", split(KEY, 2))
-@pytest.mark.parametrize("time_steps", [1, 5])
+@pytest.mark.parametrize("time_steps", [2, 5])
 @pytest.mark.parametrize("local_choi_rank", [2, 4])
 @pytest.mark.parametrize("sqrt_bond_dim", [1, 5])
 def test_sampler(

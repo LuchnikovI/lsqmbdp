@@ -54,11 +54,7 @@ def main(cfg: DictConfig):
     all_samples = device_put(jnp.zeros((0, time_steps), dtype=jnp.int32), device=main_cpu)
     for key in keys:
         key, subkey = split(key)
-        prob_skip = uniform(subkey, (1,), minval=eps_min, maxval=eps_max) / 16
-        prob_measure = jnp.ones((15,)) * (1 - prob_skip) / 15
-        logits = jnp.concatenate([jnp.log(prob_skip), jnp.log(prob_measure)], axis=0)
-        key, subkey = split(key)
-        indices = categorical(subkey, logits, shape=(local_devices_number, batch_size, time_steps))
+        indices = categorical(subkey, jnp.ones((16,)), shape=(local_devices_number, batch_size, time_steps))
         subkeys = split(key, local_devices_number)
         samples = par_gen_samples(subkeys, sampler, indices)
         all_indices = jnp.concatenate([all_indices, device_put(indices, main_cpu).reshape((-1, time_steps))])

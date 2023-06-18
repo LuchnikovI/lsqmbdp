@@ -10,99 +10,14 @@ InfluenceMatrix = List[Array]
 InfluenceMatrixParameters = List[Array]
 
 
-def random_unitary_params(
-        subkey: KeyArray,
-        time_steps: int,
-        local_choi_rank: int,
-        sqrt_bond_dim: int,
-) -> InfluenceMatrixParameters:
-    """Generates isometric matrices that parametrize an influence matrix.
-    Those isometric matrices lead to Choi rank 1.
-    Args:
-        subkey: jax random seed
-        time_steps: number of time steps
-        local_choi_rank: local choi rank
-        sqrt_bond_dim: square root of bond dimension
-    Returns: Influence matrix parameters"""
-
-    def gen_random_isom(
-            subkey: KeyArray,
-            out_dim: int,
-            inp_dim: int,
-            local_choi_rank: int,
-    ) -> Array:
-        ker = normal(subkey, (int(out_dim / local_choi_rank), inp_dim, 2))
-        ker = ker[..., 0] + 1j * ker[..., 1]
-        ker, _ = jnp.linalg.qr(ker)
-        aux = jnp.zeros((local_choi_rank,))
-        aux = aux.at[0].set(1.)
-        ker = jnp.tensordot(aux, ker, axes=0)
-        ker = ker.reshape((out_dim, inp_dim))
-        return ker
-    out_dims = time_steps * [2 * sqrt_bond_dim * local_choi_rank]
-    inp_dims = (time_steps - 1) * [2 * sqrt_bond_dim] + [2]
-    subkeys = split(subkey, time_steps)
-    params = [gen_random_isom(subkey, out_dim, inp_dim, local_choi_rank)\
-              for subkey, out_dim, inp_dim in zip(subkeys, out_dims, inp_dims)]
-    return params
-
-
-def random_slow_params(
-        subkey: KeyArray,
-        time_steps: int,
-        local_choi_rank: int,
-        sqrt_bond_dim: int,
-        eps: float,
-) -> InfluenceMatrixParameters:
-    """Generates isometric matrices that parametrize an influence matrix.
-    Those isometric matrices lead to Choi rank almost 1 up to small noise.
-    Args:
-        subkey: jax random seed
-        time_steps: number of time steps
-        local_choi_rank: local choi rank
-        sqrt_bond_dim: square root of bond dimension
-        eps: noise std
-    Returns: Influence matrix parameters"""
-
-    def gen_random_isom(
-            subkey: KeyArray,
-            out_dim: int,
-            inp_dim: int,
-            local_choi_rank: int,
-    ) -> Array:
-        #ker = normal(subkey, (int(out_dim / local_choi_rank), inp_dim, 2))
-        #ker = ker[..., 0] + 1j * ker[..., 1]
-        #ker, _ = jnp.linalg.qr(ker)
-        ker = jnp.eye(inp_dim, dtype=jnp.complex64)
-        if (out_dim / local_choi_rank) > inp_dim:
-            aux = jnp.zeros((int(out_dim / local_choi_rank) - inp_dim, inp_dim))
-            ker = jnp.concatenate([aux, ker], axis=0)
-        aux = jnp.zeros((local_choi_rank,))
-        aux = aux.at[0].set(1.)
-        ker = jnp.tensordot(aux, ker, axes=0)
-        ker = ker.reshape((out_dim, inp_dim))
-        #_, subkey = split(subkey)
-        ker = ker + eps * normal(subkey, ker.shape)
-        ker, _ = jnp.linalg.qr(ker)
-        return ker
-    out_dims = time_steps * [2 * sqrt_bond_dim * local_choi_rank]
-    inp_dims = (time_steps - 1) * [2 * sqrt_bond_dim] + [2]
-    subkeys = split(subkey, time_steps)
-    params = [gen_random_isom(subkey, out_dim, inp_dim, local_choi_rank)\
-              for subkey, out_dim, inp_dim in zip(subkeys, out_dims, inp_dims)]
-    return params
-
-
 def random_params(
         subkey: KeyArray,
-        time_steps: int,
         local_choi_rank: int,
         sqrt_bond_dim: int,
 ) -> InfluenceMatrixParameters:
     """Generates isometric matrices that parametrize an influence matrix.
     Args:
         subkey: jax random seed
-        time_steps: number of time steps
         local_choi_rank: local choi rank
         sqrt_bond_dim: square root of bond dimension
     Returns: Influence matrix parameters"""
@@ -116,9 +31,9 @@ def random_params(
         ker = ker[..., 0] + 1j * ker[..., 1]
         ker, _ = jnp.linalg.qr(ker)
         return ker
-    out_dims = time_steps * [2 * sqrt_bond_dim * local_choi_rank]
-    inp_dims = (time_steps - 1) * [2 * sqrt_bond_dim] + [2]
-    subkeys = split(subkey, time_steps)
+    out_dims = 2 * [2 * sqrt_bond_dim * local_choi_rank]
+    inp_dims = [2 * sqrt_bond_dim] + [2]
+    subkeys = split(subkey, 2)
     params = [gen_random_isom(subkey, out_dim, inp_dim)\
               for subkey, out_dim, inp_dim in zip(subkeys, out_dims, inp_dims)]
     return params
@@ -126,11 +41,13 @@ def random_params(
 
 def params2im(
         params: InfluenceMatrixParameters,
+        time_steps: int,
         local_choi_rank: int,
 ) -> InfluenceMatrix:
     """Transforms parameters of an influence matrix into the influence matrix.
     Args:
         params: isometric matrices that parametrize an influance matrix
+        time_steps: number of time steps
         local_choi_rank: local choi rank
     Returns: Influence matrix"""
 
@@ -145,7 +62,7 @@ def params2im(
         ker = ker.transpose((1, 5, 0, 4, 2, 6, 3, 7))
         ker = ker.reshape((out_dim ** 2, 2, 2, 2, 2, inp_dim ** 2))
         return ker
-    influence_matrix = [translate_ker(ker) for ker in params]
+    influence_matrix = (time_steps - 1) * [translate_ker(params[0])] + [translate_ker(params[1])]
     total_out_dim, total_inp_dim = params[0].shape
     out_dim = int(total_out_dim / (2 * local_choi_rank))
     inp_dim = int(total_inp_dim / 2)
@@ -170,27 +87,8 @@ def random_im(
         sqrt_bomd_dim: square root of the bond dim
     Returns: random influence matrix"""
 
-    params = random_params(key, time_steps, local_choi_rank, sqrt_bond_dim)
-    kers = params2im(params, local_choi_rank)
-    return kers
-
-
-def random_unitary_im(
-        key: KeyArray,
-        time_steps: int,
-        local_choi_rank: int,
-        sqrt_bond_dim: int,
-) -> InfluenceMatrix:
-    """Generates a random free of dissipation Influance Matrix.
-    Args:
-        key: jax random seed
-        time_steps: number of time steps
-        local_choi_rank: dimension of a space that traced out at each time step
-        sqrt_bomd_dim: square root of the bond dim
-    Returns: random influence matrix"""
-
-    params = random_unitary_params(key, time_steps, local_choi_rank, sqrt_bond_dim)
-    kers = params2im(params, local_choi_rank)
+    params = random_params(key, local_choi_rank, sqrt_bond_dim)
+    kers = params2im(params, time_steps, local_choi_rank)
     return kers
 
 
