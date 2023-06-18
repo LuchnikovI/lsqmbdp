@@ -8,6 +8,8 @@ generated_im_params:
 dataset_generation_params:
   batch_size: 100
   batches_number: 100
+  eps_min: 0.2
+  eps_max: 1
 
 training_params:
   sqrt_bond_dim: 4
