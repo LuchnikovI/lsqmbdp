@@ -20,8 +20,6 @@ par_gen_samples = pmap(gen_samples, in_axes=(0, None, 0))
 @hydra.main(version_base=None, config_path="../experiments/configs")
 def main(cfg: DictConfig):
     conf = list(cfg.items())[0][1]
-    eps_min = float(conf.dataset_generation_params.eps_min)
-    eps_max = float(conf.dataset_generation_params.eps_max)
     batch_size = int(conf.dataset_generation_params.batch_size)
     batches_number = int(conf.dataset_generation_params.batches_number)
     seed = int(conf.seed)
