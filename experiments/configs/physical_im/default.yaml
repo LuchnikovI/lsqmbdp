@@ -5,8 +5,6 @@ im_name: "J_0.2000_chi_256.h5"
 dataset_generation_params:
   batch_size: 5000
   batches_number: 160
-  eps_min: 0.04
-  eps_max: 1
 
 training_params:
   sqrt_bond_dim: 7
