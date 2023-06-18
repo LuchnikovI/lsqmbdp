@@ -5,7 +5,7 @@
 import logging
 logging.getLogger("jax._src.xla_bridge").addFilter(lambda _: False)
 import jax.numpy as jnp
-from jax.random import split, PRNGKey, categorical
+from jax.random import split, PRNGKey, categorical, uniform
 from jax import pmap, local_device_count, devices, device_put
 from sampler import gen_samples, im2sampler
 import yaml # type: ignore
@@ -20,6 +20,8 @@ par_gen_samples = pmap(gen_samples, in_axes=(0, None, 0))
 @hydra.main(version_base=None, config_path="../experiments/configs")
 def main(cfg: DictConfig):
     conf = list(cfg.items())[0][1]
+    eps_min = float(conf.dataset_generation_params.eps_min)
+    eps_max = float(conf.dataset_generation_params.eps_max)
     batch_size = int(conf.dataset_generation_params.batch_size)
     batches_number = int(conf.dataset_generation_params.batches_number)
     seed = int(conf.seed)
@@ -52,7 +54,11 @@ def main(cfg: DictConfig):
     all_samples = device_put(jnp.zeros((0, time_steps), dtype=jnp.int32), device=main_cpu)
     for key in keys:
         key, subkey = split(key)
-        indices = categorical(subkey, jnp.ones((16,)), shape=(local_devices_number, batch_size, time_steps))
+        prob_skip = uniform(subkey, (1,), minval=eps_min, maxval=eps_max) / 16
+        prob_measure = jnp.ones((15,)) * (1 - prob_skip) / 15
+        logits = jnp.concatenate([jnp.log(prob_skip), jnp.log(prob_measure)], axis=0)
+        key, subkey = split(key)
+        indices = categorical(subkey, logits, shape=(local_devices_number, batch_size, time_steps))
         subkeys = split(key, local_devices_number)
         samples = par_gen_samples(subkeys, sampler, indices)
         all_indices = jnp.concatenate([all_indices, device_put(indices, main_cpu).reshape((-1, time_steps))])

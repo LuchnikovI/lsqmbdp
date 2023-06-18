@@ -76,6 +76,7 @@ def par_dynamics_prediction(
     phis = [random_unitary_channel(2, subkey) for subkey in subkeys]
     density_matrices = dynamics(influence_matrix, phis)
     predicted_density_matrices = dynamics(trained_influence_matrix, phis)
+    assert len(density_matrices) == len(predicted_density_matrices)
     return jnp.array(density_matrices), jnp.array(predicted_density_matrices)
 
 
