@@ -57,6 +57,7 @@ def main():
     phi = phi.transpose((0, 4, 1, 5, 2, 6, 3, 7)).reshape((4, 4, 4, 4))
     lmbds_gen = [np.linalg.eigvalsh(rho) for rho in coupled_dynamics(im_exact1, im_exact2, phi)]
     lmbds_trained = [np.linalg.eigvalsh(rho) for rho in coupled_dynamics(im_trained1, im_trained2, phi)]
+    plt.title(r"$J_x={}$, $J_y={}$, $J_z={}$".format(8 * xx, 8 * yy, 8 * zz))
     plt.plot([lmbds[0] for lmbds in lmbds_gen], 'b')
     plt.plot([lmbds[1] for lmbds in lmbds_gen], 'r')
     plt.plot([lmbds[2] for lmbds in lmbds_gen], 'k')
@@ -65,9 +66,10 @@ def main():
     plt.plot([lmbds[1] for lmbds in lmbds_trained], 'r--')
     plt.plot([lmbds[2] for lmbds in lmbds_trained], 'k--')
     plt.plot([lmbds[3] for lmbds in lmbds_trained], 'g--')
-    plt.ylabel("lmbd")
-    plt.xlabel("time")
-    plt.savefig(os.path.dirname(args.im_path1) + "/coupled_dynamics_plot.pdf")
+    plt.legend([r"$\lambda_0$ exact", r"$\lambda_1$ exact", r"$\lambda_2$ exact", r"$\lambda_3$ exact",
+                r"$\lambda_0$ predicted", r"$\lambda_1$ predicted", r"$\lambda_2$ predicted", r"$\lambda_3$ predicted"])
+    plt.xlabel("Time")
+    plt.savefig(os.path.dirname(args.im_path1) + "/coupled_dynamics_plot.png")
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@
 /src/.pytest_cache
 /src/__pycache__
 /src/hdf5_converter.py
+/src/hdf5_lookup.py
 /.mypy_cache
 unsorted
 *.sif
@@ -18,3 +19,4 @@ log_*
 /J_0.6000_chi_256
 /physical_ims
 /simple_random_im
+/raw_ims

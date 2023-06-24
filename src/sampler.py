@@ -86,30 +86,28 @@ def _log_prob(
 ) -> Array:
     time_steps = indices.shape[0]
     assert samples.shape[0] == time_steps
-    state = jnp.ones((1, 1))
+    state = jnp.ones((1,))
     log_abs = jnp.zeros((1,))
-    params = (time_steps - 1) * [params[0]] + [params[1]]
-    for (ker, index, sample) in zip(params[::-1], indices[::-1], samples[::-1]):
+    _, total_inp_dim = params[0].shape
+    inp_dim = int(total_inp_dim / 2)
+    right_param = params[1].reshape((local_choi_dim, 2, inp_dim, 2, 1))
+    mid_param = params[0].reshape((local_choi_dim, 2, inp_dim, 2, inp_dim))
+    right_ker = jnp.einsum("qpirj,qsktl,absp,cdtr->abcdikjl", right_param, right_param.conj(), projs, projs)
+    mid_ker = jnp.einsum("qpirj,qsktl,absp,cdtr->abcdikjl", mid_param, mid_param.conj(), projs, projs)
+    for i, (index, sample) in enumerate(zip(indices[::-1], samples[::-1])):
         idx0, idx1 = jnp.unravel_index(index, (4, 4))
         smp0, smp1 = jnp.unravel_index(sample, (2, 2))
-        projs0 = projs[smp0, idx0]
-        projs1 = projs[smp1, idx1]
-        _, total_inp_dim = ker.shape
-        inp_dim = int(total_inp_dim / 2)
-        ker = ker.reshape((local_choi_dim, 2, -1, 2, inp_dim))
-        conj_ker = ker.conj()
-        conj_ker = conj_ker.transpose((2, 3, 1, 0, 4))
-        conj_ker = conj_ker.reshape((-1, 4 * local_choi_dim, inp_dim))
-        ker = jnp.tensordot(projs0, ker, axes=[[1], [1]])
-        ker = jnp.tensordot(projs1, ker, axes=[[1], [3]])
-        ker = ker.transpose((3, 0, 1, 2, 4))
-        ker = ker.reshape((-1, 4 * local_choi_dim, inp_dim))
-        state = jnp.tensordot(conj_ker, state, axes=[[2], [1]])
-        state = jnp.tensordot(ker, state, axes=[[1, 2], [1, 2]])
+        if i == 0:
+            ker = right_ker[smp0, idx0, smp1, idx1]
+            ker = ker.reshape((inp_dim ** 2, 1))
+        else:
+            ker = mid_ker[smp0, idx0, smp1, idx1]
+            ker = ker.reshape((inp_dim ** 2, inp_dim ** 2))
+        state = ker @ state
         norm = jnp.linalg.norm(state)
         state /= norm
         log_abs += jnp.log(norm)
-    log_abs += jnp.log(jnp.trace(state))
+    log_abs += jnp.log(jnp.trace(state.reshape(inp_dim, inp_dim)))
     return log_abs[0].real
 
 
