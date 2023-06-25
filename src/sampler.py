@@ -6,7 +6,7 @@ from jax import Array, vmap
 from jax.random import KeyArray, split, categorical
 import jax.numpy as jnp
 from im import InfluenceMatrix, InfluenceMatrixParameters
-from constants import projs
+from constants import projs, hcnot
 from sampler_utils import _build_left_states, _push_to_left
 
 REGULARIZER = 0
@@ -23,6 +23,7 @@ def im2sampler(
 
     def translate_ker(ker: Array) -> Array:
         left_bond, _, _, _, _, right_bond = ker.shape
+        ker = jnp.einsum("iqprsj,klqr,mnps->ikmlnj", ker, hcnot, hcnot.conj())
         ker = jnp.tensordot(ker, projs, axes=[[1, 2], [3, 2]])
         ker = jnp.tensordot(ker, projs, axes=[[1, 2], [3, 2]])
         ker = ker.transpose((0, 2, 4, 3, 5, 1))
@@ -91,7 +92,9 @@ def _log_prob(
     _, total_inp_dim = params[0].shape
     inp_dim = int(total_inp_dim / 2)
     right_param = params[1].reshape((local_choi_dim, 2, inp_dim, 2, 1))
+    right_param = jnp.einsum("ijqp,kqlpm->kiljm", hcnot, right_param)
     mid_param = params[0].reshape((local_choi_dim, 2, inp_dim, 2, inp_dim))
+    mid_param = jnp.einsum("ijqp,kqlpm->kiljm", hcnot, mid_param)
     right_ker = jnp.einsum("qpirj,qsktl,absp,cdtr->abcdikjl", right_param, right_param.conj(), projs, projs)
     mid_ker = jnp.einsum("qpirj,qsktl,absp,cdtr->abcdikjl", mid_param, mid_param.conj(), projs, projs)
     for i, (index, sample) in enumerate(zip(indices[::-1], samples[::-1])):

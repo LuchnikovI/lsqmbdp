@@ -25,3 +25,20 @@ v = jnp.linalg.eigh(obs)[1].transpose((2, 0, 1))
 v = v[..., jnp.newaxis] * v[:, :, jnp.newaxis].conj()
 s0_proj = jnp.concatenate([jnp.eye(2)[jnp.newaxis, jnp.newaxis], jnp.zeros((1, 1, 2, 2))], axis=0)
 projs = jnp.concatenate([v, s0_proj], axis=1)
+
+# Bell measurements adapter
+cnot = jnp.array(
+    [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 0, 1,
+        0, 0, 1, 0,
+    ]
+).reshape((2, 2, 2, 2))
+h = (1 / jnp.sqrt(2)) * jnp.array(
+    [
+        1,  1,
+        1, -1,
+    ]
+).reshape((2, 2))
+hcnot = jnp.einsum("iq,qjpr->ijpr", h, cnot)
