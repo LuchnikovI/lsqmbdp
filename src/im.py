@@ -10,6 +10,46 @@ InfluenceMatrix = List[Array]
 InfluenceMatrixParameters = List[Array]
 
 
+def random_params_weak_decay(
+        subkey: KeyArray,
+        local_choi_rank: int,
+        sqrt_bond_dim: int,
+) -> InfluenceMatrixParameters:
+    """Generates isometric matrices that parametrize an influence matrix.
+    This parametrization leads to weak decay.
+    Args:
+        subkey: jax random seed
+        local_choi_rank: local choi rank
+        sqrt_bond_dim: square root of bond dimension
+    Returns: Influence matrix parameters"""
+
+    def gen_random_isom(
+            subkey: KeyArray,
+            out_dim: int,
+            inp_dim: int,
+    ) -> Array:
+        aux_dim = int(out_dim / inp_dim)
+        ker = normal(subkey, (inp_dim, inp_dim, 2))
+        ker = ker[..., 0] + 1j * ker[..., 1]
+        ker, _ = jnp.linalg.qr(ker)
+        ker = ker[jnp.newaxis]
+        _, subkey = split(subkey)
+        aux = normal(subkey, (aux_dim - 1, inp_dim, inp_dim, 2))
+        aux = aux[..., 0] + 1j * aux[..., 1]
+        aux = 0.01 * aux
+        ker = jnp.concatenate([ker, aux], axis=0)
+        ker = ker.reshape((out_dim, inp_dim))
+        w, _, vh = jnp.linalg.svd(ker, full_matrices=False)
+        ker = w @ vh
+        return ker
+    out_dims = 2 * [2 * sqrt_bond_dim * local_choi_rank]
+    inp_dims = [2 * sqrt_bond_dim] + [2]
+    subkeys = split(subkey, 2)
+    params = [gen_random_isom(subkey, out_dim, inp_dim)\
+              for subkey, out_dim, inp_dim in zip(subkeys, out_dims, inp_dims)]
+    return params
+
+
 def random_params(
         subkey: KeyArray,
         local_choi_rank: int,

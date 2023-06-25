@@ -19,7 +19,7 @@ from qgoptax.optimizers import RAdam # type: ignore
 from im import (
     params2im,
     #random_slow_params,
-    random_params,
+    random_params_weak_decay,
     # random_unitary_channel,
 )
 from mpa import set_to_forward_canonical, mpa_log_dot
@@ -33,7 +33,7 @@ from cli_utils import (
     _learning_rate_update,
 )
 
-par_random_params = pmap(random_params, static_broadcasted_argnums=(1, 2))
+par_random_params_weak_decay = pmap(random_params_weak_decay, static_broadcasted_argnums=(1, 2))
 
 
 @hydra.main(version_base=None, config_path="../experiments/configs")
@@ -77,7 +77,7 @@ def main(cfg: DictConfig):
     key, _ = split(key)
     _, subkey = split(key)
     subkeys = jnp.tile(subkey, (local_devices_number, 1))
-    params = par_random_params(
+    params = par_random_params_weak_decay(
         subkeys,
         local_choi_rank,
         sqrt_bond_dim,
