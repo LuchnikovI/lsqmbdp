@@ -116,6 +116,8 @@ def _log_prob(
     mid_param = jnp.einsum("ijqp,kqlpm->kiljm", hcnot, mid_param)
     right_ker = jnp.einsum("qpirj,qsktl,absp,cdtr->abcdikjl", right_param, right_param.conj(), projs, projs)
     mid_ker = jnp.einsum("qpirj,qsktl,absp,cdtr->abcdikjl", mid_param, mid_param.conj(), projs, projs)
+    right_ker = right_ker / 2
+    mid_ker = mid_ker / 2
     for i, (index, sample) in enumerate(zip(indices[::-1], samples[::-1])):
         idx0, idx1 = jnp.unravel_index(index, (4, 4))
         smp0, smp1 = jnp.unravel_index(sample, (2, 2))
