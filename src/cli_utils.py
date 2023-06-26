@@ -80,15 +80,14 @@ def par_dynamics_prediction(
     return jnp.array(density_matrices), jnp.array(predicted_density_matrices)
 
 
-@partial(pmap, in_axes=(0, 0, None, None), static_broadcasted_argnums=(2, 3))
+@partial(pmap, in_axes=(0, 0, None), static_broadcasted_argnums=2)
 @value_and_grad
 def _loss_and_grad(
         params: InfluenceMatrixParameters,
         data: Array,
         local_choi_rank: int,
-        batch_size: int,
 ) -> Array:
-    return -log_prob(params, data[:, 0], data[:, 1], local_choi_rank) * batch_size
+    return -log_prob(params, data[:, 0], data[:, 1], local_choi_rank)
 
 
 @partial(pmap, axis_name='i')

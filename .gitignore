@@ -2,7 +2,6 @@
 /src/.pytest_cache
 /src/__pycache__
 /src/hdf5_converter.py
-/src/hdf5_lookup.py
 /.mypy_cache
 unsorted
 *.sif

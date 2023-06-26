@@ -22,6 +22,7 @@ def main():
         except yaml.YAMLError as exc:
             print(exc)
     epochs_number = int(log["training_params"]["epochs_number"])
+    loss_value_exact_model = float(log["loss_value_exact_model"])
     initial_cosin_sim = float(log["initial_metrics"]["cosin_sim"])
     initial_mean_trace_dist = float(log["initial_metrics"]["mean_trace_dist"])
     cosin_sim = [initial_cosin_sim] + [float(log[i]["cosin_sim"]) for i in range(1, epochs_number + 1)]
@@ -38,6 +39,7 @@ def main():
     color = 'tab:blue'
     ax2.set_ylabel('loss value', color=color)
     ax2.plot(list(range(1, epochs_number + 1)), loss_value, color=color)
+    ax2.plot(list(range(1, epochs_number + 1)), epochs_number * [loss_value_exact_model], color="k")
     ax2.tick_params(axis='y', labelcolor=color)
 
     fig.tight_layout()

@@ -4,6 +4,7 @@ from functools import partial
 from typing import List
 from jax import Array, vmap
 from jax.random import KeyArray, split, categorical
+from jax.lax import dynamic_slice
 import jax.numpy as jnp
 from im import InfluenceMatrix, InfluenceMatrixParameters
 from constants import projs, hcnot
@@ -12,6 +13,24 @@ from sampler_utils import _build_left_states, _push_to_left
 REGULARIZER = 0
 
 Sampler = List[Array]
+
+def im_log_norm(
+        influence_matrix: InfluenceMatrix,
+) -> Array:
+    """Returns the normalization facto of an influence matrix.
+    Args:
+        influence_matrix: Influence matrix
+    Returns: the normalization factor"""
+
+    log_norm = jnp.zeros((1,))
+    state = jnp.ones((1,))
+    for ker in influence_matrix[::-1]:
+        state = jnp.tensordot(jnp.einsum("iqqppj->ij", ker), state, axes=1)
+        norm = jnp.linalg.norm(state)
+        state /= norm
+        log_norm += jnp.log(norm)
+    return log_norm[0].real
+
 
 def im2sampler(
         influence_matrix: InfluenceMatrix,
@@ -51,7 +70,7 @@ def _gen_samples(
         ker = ker[:, :, indices[idx]]
         ker = jnp.tensordot(left_state, ker, axes=1)
         ker = jnp.tensordot(ker, right_state, axes=1)
-        sample = categorical(subkeys[idx], jnp.log(ker.real + REGULARIZER), shape=(1,))
+        sample = categorical(subkeys[idx], jnp.log(ker.real), shape=(1,))
         samples = samples.at[idx].set(sample[0])
         right_state = _push_to_left(right_state, sampler[idx], indices[idx], sample[0])
         norm = jnp.linalg.norm(right_state)
@@ -114,6 +133,25 @@ def _log_prob(
     return log_abs[0].real
 
 
+@partial(vmap, in_axes=(None, 0, 0))
+def _log_prob_from_sampler(
+        smpl: Sampler,
+        indices: Array,
+        samples: Array,
+) -> Array:
+    time_steps = indices.shape[0]
+    assert samples.shape[0] == time_steps
+    state = jnp.ones((1,))
+    log_abs = jnp.zeros((1,))
+    for (ker, index, sample) in zip(smpl[::-1], indices[::-1], samples[::-1]):
+        ker = dynamic_slice(ker, (0, sample, index, 0), (ker.shape[0], 1, 1, ker.shape[-1]))[:, 0, 0, :]
+        state = jnp.tensordot(ker, state, axes=1)
+        norm = jnp.linalg.norm(state)
+        state /= norm
+        log_abs += jnp.log(norm)
+    return log_abs[0].real
+
+
 def log_prob(
         params: InfluenceMatrixParameters,
         indices: Array,
@@ -129,3 +167,19 @@ def log_prob(
     Returns: logarithm of probability"""
 
     return _log_prob(params, indices, samples, local_choi_dim).sum(0)
+
+
+def log_prob_from_sampler(
+        smpl: Sampler,
+        indices: Array,
+        samples: Array,
+) -> Array:
+    """Computes a logarithmic probability of measurements outcomes from a sampler.
+    Args:
+        params: parameters of an influence matrix
+        indices: measurement basis
+        samples: measurement outcomes
+        local_choi_dim: local Choi rank
+    Returns: logarithm of probability"""
+
+    return _log_prob_from_sampler(smpl, indices, samples).sum(0)

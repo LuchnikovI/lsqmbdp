@@ -111,7 +111,7 @@ def main(cfg: DictConfig):
         opt = RAdam(stman, lr)
         av_loss_val = 0.
         for data_slice in data:
-            loss_val, grads = _loss_and_grad(params, data_slice, local_choi_rank, batch_size)
+            loss_val, grads = _loss_and_grad(params, data_slice, local_choi_rank)
             grads = _av_grad(grads)
             params, opt_state = opt.update(grads, opt_state, params)
             av_loss_val += loss_val.sum()
