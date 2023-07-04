@@ -10,9 +10,9 @@ training_params:
   sqrt_bond_dim: 4
   local_choi_rank: 2
   batch_size: 100
-  epochs_number: 20
+  epochs_number: 40
   learning_rate_in: 0.25
   learning_rate_final: 0.01
   decay_law: "linear"
-  decay_epochs_number: 10
+  decay_epochs_number: 40
   test_trajectories_number: 100

@@ -11,9 +11,14 @@ log_*
 *.pdf
 *.png
 *.csv
+hydra.yaml
+logs.yaml
+overrides.yaml
+*.log
 /intermediate_report
 /experiments/J_0.2000_chi_256
 /experiments/J_0.6000_chi_256
+/experiments/output
 /total_samples_number_3200000
 /J_0.6000_chi_256
 /physical_ims
