@@ -8,7 +8,7 @@ import numpy as np
 from scipy.linalg import expm # type: ignore
 import matplotlib.pyplot as plt # type: ignore
 from im import coupled_dynamics
-from constants import sx, sy, sz
+from constants import sigmax, sigmay, sigmaz
 from cli_utils import _hdf2im, _hdf2trained_im
 
 #plt.rcParams.update({
@@ -51,7 +51,7 @@ def main():
     xx = float(args.xx_int)
     yy = float(args.yy_int)
     zz = float(args.zz_int)
-    h = xx * np.kron(sx, sx) + yy * np.kron(sy, sy) + zz * np.kron(sz, sz)
+    h = xx * np.kron(sigmax, sigmax) + yy * np.kron(sigmay, sigmay) + zz * np.kron(sigmaz, sigmaz)
     u = expm(1j * 8 * h).reshape((2, 2, 2, 2))
     phi = np.tensordot(u, u.conj(), axes=0)
     phi = phi.transpose((0, 4, 1, 5, 2, 6, 3, 7)).reshape((4, 4, 4, 4))

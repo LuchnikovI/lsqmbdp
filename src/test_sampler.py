@@ -38,12 +38,6 @@ def test_im2sampler(
 
     _, subkey = split(subkey)
     sampler = im2sampler(random_im(subkey, time_steps, local_choi_rank, sqrt_bond_dim))
-    _, subkey = split(subkey)
-    index = categorical(subkey, jnp.ones((16,)), shape=(time_steps,))
-    for j, i in enumerate(index):
-        ker = sampler[j]
-        ker = ker[:, :, i]
-        sampler[j] = ker
     sum_val = mpa_sum(sampler)
     assert (jnp.abs(sum_val - 1.) < ACC).all()
     arr = mpa2tensor(sampler).reshape((-1,))
@@ -63,14 +57,11 @@ def test_sampler(
     """Tests sampler comparing the MPS based version with the explicit one."""
     _, subkey = split(subkey)
     sampler = im2sampler(random_im(subkey, time_steps, local_choi_rank, sqrt_bond_dim))
-    for _ in range(10):
-        _, subkey = split(subkey)
-        index = categorical(subkey, jnp.ones((16,)), shape=(time_steps,))
-        _, subkey = split(subkey)
-        probability = _get_solid_probability(sampler, index)
-        solid_sample = _sample_from_solid_probability(subkey, probability)
-        sample = _gen_samples(subkey[jnp.newaxis], sampler, index[jnp.newaxis])
-        assert (sample[0] == solid_sample).all()
+    _, subkey = split(subkey)
+    probability = _get_solid_probability(sampler)
+    solid_sample = _sample_from_solid_probability(subkey, probability)
+    sample = _gen_samples(subkey[jnp.newaxis], sampler)
+    assert (sample[0] == solid_sample).all()
 
 
 @pytest.mark.parametrize("subkey", split(KEY, 2))
@@ -87,13 +78,11 @@ def test_log_probabilities(
 ):
     """Test logarithmic probabilities."""
 
-    indices = categorical(subkey, jnp.ones((16,)), shape=(samples_number, time_steps))
-    _, subkey = split(subkey)
     params = random_params(subkey, local_choi_rank, sqrt_bond_dim)
     influence_matrix = params2im(params, time_steps, local_choi_rank)
     sampler = im2sampler(influence_matrix)
     subkey = split(subkey, samples_number)
-    samples = _gen_samples(subkey, sampler, indices)
-    log_prob_1 = log_prob(params, indices, samples, local_choi_rank)
-    log_prob_2 = log_prob_from_sampler(sampler, indices, samples)
+    samples = _gen_samples(subkey, sampler)
+    log_prob_1 = log_prob(params, samples, local_choi_rank)
+    log_prob_2 = log_prob_from_sampler(sampler, samples)
     assert jnp.abs(log_prob_1 - log_prob_2) < ACC

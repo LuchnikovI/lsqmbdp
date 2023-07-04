@@ -58,7 +58,7 @@ def main(cfg: DictConfig):
     set_to_forward_canonical(unknown_influence_matrix)
     time_steps = len(unknown_influence_matrix)
     data = device_put(_hdf2data(output_dir), main_cpu)
-    data = data.reshape((*data_tail_shape, 2, time_steps))
+    data = data.reshape((*data_tail_shape, time_steps))
     print(yaml.dump(
         {
             "machine_dependant_training_params":
@@ -117,7 +117,7 @@ def main(cfg: DictConfig):
             params, opt_state = opt.update(grads, opt_state, params)
             av_loss_val += loss_val.sum()
         key, subkey = split(key)
-        data = permutation(subkey, data.reshape((-1, 2, time_steps)), False).reshape((*data_tail_shape, 2, time_steps))
+        data = permutation(subkey, data.reshape((-1, time_steps)), False).reshape((*data_tail_shape, time_steps))
         found_influence_matrix = params2im([ker[0] for ker in params], time_steps, local_choi_rank)
         density_matrices = par_dynamics_prediction(unknown_influence_matrix, found_influence_matrix, subkeys)
         hf_trained = h5py.File(output_dir + "/im_trained", 'a')

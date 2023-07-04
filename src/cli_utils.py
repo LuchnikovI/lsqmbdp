@@ -87,7 +87,7 @@ def _loss_and_grad(
         data: Array,
         local_choi_rank: int,
 ) -> Array:
-    return -log_prob(params, data[:, 0], data[:, 1], local_choi_rank)
+    return -log_prob(params, data, local_choi_rank)
 
 
 @partial(pmap, axis_name='i')

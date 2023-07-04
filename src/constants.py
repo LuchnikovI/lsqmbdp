@@ -3,42 +3,27 @@
 import jax.numpy as jnp
 
 # Pauli matrices
-sx = jnp.array([[0, 1], [1, 0]], dtype=jnp.complex64)
-sy = jnp.array([[0, -1j], [1j, 0]], dtype=jnp.complex64)
-sz = jnp.array([[1, 0], [0, -1]], dtype=jnp.complex64)
-s0 = jnp.eye(2, dtype=jnp.complex64)
-
-# Tensor with all observables (Pauli matrices)
-obs = jnp.concatenate([sx[jnp.newaxis], sy[jnp.newaxis], sz[jnp.newaxis]], axis=0)
-
-# A tensor containing projectors for all observables and possible outcomes
-#
-#               ket       bra
-#                 \       /
-#                  2     3
-#                   \   /
-#                    ###
-#     outcome ---0---###---1--- observable number
-#                    ###
-#
-v = jnp.linalg.eigh(obs)[1].transpose((2, 0, 1))
-v = v[..., jnp.newaxis] * v[:, :, jnp.newaxis].conj()
-s0_proj = jnp.concatenate([jnp.eye(2)[jnp.newaxis, jnp.newaxis], jnp.zeros((1, 1, 2, 2))], axis=0)
-projs = jnp.concatenate([v, s0_proj], axis=1)
-
-# Bell measurements adapter
-cnot = jnp.array(
+sigmax = jnp.array([[0, 1], [1, 0]], dtype=jnp.complex64)
+sigmay = jnp.array([[0, -1j], [1j, 0]], dtype=jnp.complex64)
+sigmaz = jnp.array([[1, 0], [0, -1]], dtype=jnp.complex64)
+identity = jnp.eye(2)
+sigma = jnp.concatenate(
     [
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 0, 1,
-        0, 0, 1, 0,
-    ]
-).reshape((2, 2, 2, 2))
-h = (1 / jnp.sqrt(2)) * jnp.array(
+        sigmax[jnp.newaxis],
+        sigmay[jnp.newaxis],
+        sigmaz[jnp.newaxis],
+    ],
+    axis=0,
+)
+
+# Tetrahedral POVM
+weights = jnp.array(
     [
-        1,  1,
-        1, -1,
+                          0,               0,       1,
+        2 * jnp.sqrt(2) / 3,               0,  -1 / 3,
+           -jnp.sqrt(2) / 3,  jnp.sqrt(2 / 3), -1 / 3,
+           -jnp.sqrt(2) / 3, -jnp.sqrt(2 / 3), -1 / 3,
     ]
-).reshape((2, 2))
-hcnot = jnp.einsum("iq,qjpr->ijpr", h, cnot)
+).reshape((4, 3))
+povm = 0.25 * (identity[jnp.newaxis] + jnp.tensordot(weights, sigma, axes=1))
+inv_povm = jnp.linalg.inv(povm.reshape((4, 4))).reshape((2, 2, 4))
