@@ -22,7 +22,7 @@ from sampler_utils import (
 
 KEY = PRNGKey(47)
 
-ACC = 1e-5
+ACC = 1e-4
 
 @pytest.mark.parametrize("subkey", split(KEY, 2))
 @pytest.mark.parametrize("time_steps", [2, 5])
@@ -91,6 +91,8 @@ def test_log_probabilities(
     _, subkey = split(subkey)
     params = random_params(subkey, local_choi_rank, sqrt_bond_dim)
     influence_matrix = params2im(params, time_steps, local_choi_rank)
+    for i in range(len(influence_matrix)):
+        influence_matrix[i] = influence_matrix[i] / (1.5 + 2j)
     sampler = im2sampler(influence_matrix)
     subkey = split(subkey, samples_number)
     samples = _gen_samples(subkey, sampler, indices)

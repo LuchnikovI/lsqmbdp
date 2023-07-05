@@ -1,18 +1,18 @@
 seed: 42
 
-im_name: "J_0.2000_chi_256.h5" 
+im_name: "flat_dt_0.2000_chi_256.h5" 
 
 dataset_generation_params:
-  batch_size: 100
-  batches_number: 100
+  batch_size: 10
+  batches_number: 1000
 
 training_params:
-  sqrt_bond_dim: 4
-  local_choi_rank: 2
+  sqrt_bond_dim: 5
+  local_choi_rank: 64
   batch_size: 100
-  epochs_number: 40
+  epochs_number: 80
   learning_rate_in: 0.25
   learning_rate_final: 0.01
-  decay_law: "linear"
-  decay_epochs_number: 40
+  decay_law: "exponential"
+  decay_epochs_number: 80
   test_trajectories_number: 100

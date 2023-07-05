@@ -67,7 +67,7 @@ def main(cfg: DictConfig):
     _data2hdf(data, output_dir)
     print(yaml.dump(
         {
-            "loss_value_exact_model": float(-log_prob_value),
+            "loss_value_exact_model": float(-log_prob_value.real),
         },
         width=float("inf"),
     ))
