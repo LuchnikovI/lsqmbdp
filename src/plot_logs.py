@@ -4,6 +4,7 @@
 
 import os
 import matplotlib.pyplot as plt # type: ignore
+import numpy as np
 import yaml # type: ignore
 from argparse import ArgumentParser
 
@@ -37,9 +38,11 @@ def main():
     ax1.tick_params(axis='y', labelcolor=color)
     ax2 = ax1.twinx()
     color = 'tab:blue'
-    ax2.set_ylabel('loss value', color=color)
-    ax2.plot(list(range(1, epochs_number + 1)), loss_value, color=color)
-    ax2.plot(list(range(1, epochs_number + 1)), epochs_number * [loss_value_exact_model], color="k")
+    ax2.set_yscale("log")
+    ax2.set_ylabel('|loss - exact_loss|', color=color)
+    ax2.plot(list(range(1, epochs_number + 1)),
+             np.abs(np.array(loss_value) - np.ones((epochs_number,)) * loss_value_exact_model),
+             color=color)
     ax2.tick_params(axis='y', labelcolor=color)
 
     fig.tight_layout()

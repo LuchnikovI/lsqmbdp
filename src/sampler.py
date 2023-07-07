@@ -29,7 +29,7 @@ def im_log_norm(
         norm = jnp.linalg.norm(state)
         state /= norm
         log_norm += jnp.log(norm)
-    return log_norm[0].real
+    return log_norm[0] + jnp.log(state[0]) - len(influence_matrix) * jnp.log(2)
 
 
 def im2sampler(
@@ -40,6 +40,7 @@ def im2sampler(
         influence_matrix: Influence matrix
     Return: a sampler"""
 
+    norm_per_ker = jnp.exp(im_log_norm(influence_matrix) / len(influence_matrix))
     def translate_ker(ker: Array) -> Array:
         left_bond, _, _, _, _, right_bond = ker.shape
         ker = jnp.tensordot(ker, povm, axes=[[1, 2], [2, 1]])
@@ -67,6 +68,7 @@ def _gen_samples(
         ker = sampler[idx]
         ker = jnp.tensordot(left_state, ker, axes=1)
         ker = jnp.tensordot(ker, right_state, axes=1)
+        ker /= ker.sum()
         sample = categorical(subkeys[idx], jnp.log(ker.real), shape=(1,))
         samples = samples.at[idx].set(sample[0])
         right_state = _push_to_left(right_state, sampler[idx], sample[0])

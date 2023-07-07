@@ -226,16 +226,14 @@ def coupled_dynamics(
         list of density matrices of these two spins evolving in time"""
 
     def trace_out(left: Array, ker: Array) -> Array:
-            return jnp.tensordot(left, jnp.einsum("qiijjp->qp", ker), axes=1)
+            return jnp.tensordot(left, jnp.einsum("qiijjp->qp", ker), axes=1) / 2
     left_states1 = [jnp.ones((1,))]
     for ker in influence_matrix1[:-1]:
         left_state = trace_out(left_states1[-1], ker)
-        left_state /= jnp.linalg.norm(left_state)
         left_states1.append(left_state)
     left_states2 = [jnp.ones((1,))]
     for ker in influence_matrix2[:-1]:
         left_state = trace_out(left_states2[-1], ker)
-        left_state /= jnp.linalg.norm(left_state)
         left_states2.append(left_state)
     right_state = jnp.array([
         1, 0, 0, 0,
@@ -244,6 +242,7 @@ def coupled_dynamics(
         0, 0, 0, 0,
     ]).reshape((1, 4, 4, 1))
     rhos = [right_state.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((4, 4))]
+    first_matrix = True
     for ker1, ker2 in zip(reversed(influence_matrix1), reversed(influence_matrix2)):
         left_state1 = left_states1.pop()
         left_state2 = left_states2.pop()
@@ -256,9 +255,11 @@ def coupled_dynamics(
         right_state = jnp.einsum("lkqp,ijqp->ijkl", ker2, right_state)
         rho = jnp.einsum("q,p,qijp->ij", left_state1, left_state2, right_state)
         rho = rho.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((4, 4))
-        norm = jnp.trace(rho)
-        rho /= norm
-        right_state /= norm
+        # This is necessary to correct a normalization of im if it is incorrect
+        if first_matrix:
+            norm = jnp.trace(rho)
+            first_matrix = False
+            right_state /= norm
         rhos.append(rho)
     return rhos
 
