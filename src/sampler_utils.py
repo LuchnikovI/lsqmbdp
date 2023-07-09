@@ -5,8 +5,6 @@ from jax import Array
 from jax.random import KeyArray, categorical, split
 import jax.numpy as jnp
 
-REGULARIZER = 1e-6
-
 Sampler = List[Array]
 
 def _push_to_right(
@@ -61,7 +59,8 @@ def _sample_from_solid_probability(
     for _ in range(size):
         probability = probability.reshape((-1, 16))
         marginal_prob = probability.sum(0)
-        sample = categorical(subkeys[idx], jnp.log(marginal_prob.real + REGULARIZER), shape=(1,))
+        marginal_prob /= marginal_prob.sum()
+        sample = categorical(subkeys[idx], jnp.log(marginal_prob.real), shape=(1,))
         probability = probability[:, sample[0]]
         samples = samples.at[idx].set(sample[0])
         idx -= 1

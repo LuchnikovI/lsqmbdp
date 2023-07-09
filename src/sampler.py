@@ -46,7 +46,7 @@ def im2sampler(
         ker = jnp.tensordot(ker, povm, axes=[[1, 2], [2, 1]])
         ker = jnp.tensordot(ker, povm, axes=[[1, 2], [2, 1]])
         ker = ker.transpose((0, 2, 3, 1))
-        ker = ker.reshape((left_bond, 16, right_bond)) / 2.
+        ker = ker.reshape((left_bond, 16, right_bond)) / (2 * norm_per_ker)
         return ker
     sampler = [translate_ker(ker) for ker in influence_matrix]
     return sampler
@@ -136,7 +136,9 @@ def _log_prob_from_sampler(
     state = jnp.ones((1,))
     log_abs = jnp.zeros((1,))
     for (ker, sample) in zip(smpl[::-1], samples[::-1]):
-        ker = dynamic_slice(ker, (0, sample, 0), (ker.shape[0], 1, ker.shape[-1]))[:, 0, :]
+        ker = dynamic_slice(ker,
+                            (jnp.array(0, dtype=jnp.int32), sample, jnp.array(0, dtype=jnp.int32)),
+                            (ker.shape[0], 1, ker.shape[-1]))[:, 0, :]
         state = jnp.tensordot(ker, state, axes=1)
         norm = jnp.linalg.norm(state)
         state /= norm
