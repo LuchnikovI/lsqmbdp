@@ -52,7 +52,7 @@ def main(cfg: DictConfig):
     key, _ = split(key)
     key, _ = split(key)
     keys = split(key, batches_number)
-    all_samples = device_put(jnp.zeros((0, time_steps), dtype=jnp.int32), device=main_cpu)
+    all_samples = device_put(jnp.zeros((0, time_steps), dtype=jnp.int8), device=main_cpu)
     log_prob_value = jnp.zeros((1,))
     for key in keys:
         subkeys = split(key, local_devices_number)

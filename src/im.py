@@ -140,7 +140,7 @@ def id_im(time_steps: int):
     Returns: the identity influence matrix
     """
 
-    kers = time_steps * [jnp.eye(4, dtype=jnp.complex64).reshape((1, 2, 2, 2, 2, 1))]
+    kers = time_steps * [jnp.eye(4, dtype=jnp.complex128).reshape((1, 2, 2, 2, 2, 1))]
     return kers
 
 
@@ -169,7 +169,7 @@ def im2phi(
         influence_matrix: influence matrix
     Returns: quantum channel"""
 
-    phi = jnp.ones((1, 1, 1, 1, 1), dtype=jnp.complex64)
+    phi = jnp.ones((1, 1, 1, 1, 1), dtype=jnp.complex128)
     for ker in influence_matrix:
         phi = jnp.tensordot(phi, ker, axes=1)
         phi = phi.transpose((0, 4, 1, 5, 2, 6, 3, 7, 8))
@@ -195,7 +195,7 @@ def dynamics(
         left_state = trace_out(left_states[-1], ker)
         left_state /= jnp.linalg.norm(left_state)
         left_states.append(left_state)
-    right_state = jnp.array([[1, 0, 0, 0]], dtype=jnp.complex64)
+    right_state = jnp.array([[1, 0, 0, 0]], dtype=jnp.complex128)
     rhos = [right_state.reshape((2, 2))]
     for ker, phi in zip(reversed(influence_matrix), reversed(phis)):
         left_state = left_states.pop()

@@ -89,7 +89,7 @@ def test_dynamics(
     subkeys = split(subkeys[-1], time_steps)
     phis = [random_unitary_channel(2, subkey) for subkey in subkeys]
     phi = phis[-1]
-    dens_true = jnp.array([1, 0, 0, 0], dtype=jnp.complex64)
+    dens_true = jnp.array([1, 0, 0, 0], dtype=jnp.complex128)
     swap_and_phi = swap_and_phi_im(time_steps, phi)
     for i, dens in enumerate(dynamics(swap_and_phi, phis)[1:]):
         if i % 2 == 1:

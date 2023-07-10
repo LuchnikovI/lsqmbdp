@@ -3,9 +3,9 @@
 import jax.numpy as jnp
 
 # Pauli matrices
-sigmax = jnp.array([[0, 1], [1, 0]], dtype=jnp.complex64)
-sigmay = jnp.array([[0, -1j], [1j, 0]], dtype=jnp.complex64)
-sigmaz = jnp.array([[1, 0], [0, -1]], dtype=jnp.complex64)
+sigmax = jnp.array([[0, 1], [1, 0]], dtype=jnp.complex128)
+sigmay = jnp.array([[0, -1j], [1j, 0]], dtype=jnp.complex128)
+sigmaz = jnp.array([[1, 0], [0, -1]], dtype=jnp.complex128)
 identity = jnp.eye(2)
 sigma = jnp.concatenate(
     [

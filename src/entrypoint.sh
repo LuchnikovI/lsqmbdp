@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+export JAX_ENABLE_X64=True
+
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 get_help() {

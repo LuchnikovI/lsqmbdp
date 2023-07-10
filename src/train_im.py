@@ -87,7 +87,7 @@ def main(cfg: DictConfig):
     lr = learning_rate_in
     opt = RAdam(stman, lr)
     opt_state = opt.init(params)
-    best_loss_val = jnp.finfo(jnp.float32).max
+    best_loss_val = jnp.finfo(jnp.float64).max
 
     # evaluates im before training
     found_influence_matrix = params2im([ker[0] for ker in params], time_steps, local_choi_rank)

@@ -62,7 +62,7 @@ def _gen_samples(
     right_state = jnp.ones((1,))
     subkeys = split(subkey, size)
     idx = size - 1
-    samples = jnp.zeros((size,), dtype=jnp.int32)
+    samples = jnp.zeros((size,), dtype=jnp.int8)
     while len(left_states) != 0:
         left_state = left_states.pop()
         ker = sampler[idx]
@@ -137,7 +137,7 @@ def _log_prob_from_sampler(
     log_abs = jnp.zeros((1,))
     for (ker, sample) in zip(smpl[::-1], samples[::-1]):
         ker = dynamic_slice(ker,
-                            (jnp.array(0, dtype=jnp.int32), sample, jnp.array(0, dtype=jnp.int32)),
+                            (jnp.array(0, dtype=jnp.int8), sample, jnp.array(0, dtype=jnp.int8)),
                             (ker.shape[0], 1, ker.shape[-1]))[:, 0, :]
         state = jnp.tensordot(ker, state, axes=1)
         norm = jnp.linalg.norm(state)
