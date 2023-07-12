@@ -16,7 +16,7 @@ def _hdf2im(output_dir: str) -> InfluenceMatrix:
             ker = jnp.array(f["im"][str(idx)])
             return ker
         kers_num = len(f["im"].values())
-        influence_matrix = [idx2ker(idx) for idx in range(kers_num)]
+        influence_matrix = [idx2ker(idx) for idx in range(kers_num-1, -1, -1)]
     return influence_matrix
 
 
@@ -26,7 +26,7 @@ def _hdf2trained_im(output_dir: str) -> InfluenceMatrix:
             ker = jnp.array(f["im"][str(idx)])
             return ker
         kers_num = len(f["im"].values())
-        influence_matrix = [idx2ker(idx) for idx in range(kers_num)]
+        influence_matrix = [idx2ker(idx) for idx in range(kers_num-1, -1, -1)]
     return influence_matrix
 
 
@@ -36,7 +36,7 @@ def _im2hdf(
 ):
     with h5py.File(output_dir + "/im_exact", 'w') as f:
         group = f.create_group("im")
-        for i, ker in enumerate(influence_matrix):
+        for i, ker in enumerate(reversed(influence_matrix)):
             group.create_dataset(str(i), data=ker)
 
 

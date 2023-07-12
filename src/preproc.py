@@ -22,6 +22,7 @@ def main(cfg: DictConfig):
         ker = np.array(im_src[id])
         lb, _, rb = ker.shape
         ker = ker.reshape((lb, 2, 2, 2, 2, rb))
+        ker = ker.transpose((5, 3, 4, 1, 2, 0))
         im_dst_group[id] = ker
 
 if __name__ == '__main__':
