@@ -32,9 +32,10 @@ def main():
     fig, ax1 = plt.subplots()
     color = 'tab:red'
     ax1.set_xlabel('Epoch number')
-    ax1.plot(list(range(epochs_number + 1)), cosin_sim, '-', color=color)
-    ax1.plot(list(range(epochs_number + 1)), mean_trace_dist, '--', color=color)
-    ax1.legend(["Cosine similarity", "Av. prediction accuracy (trace dist.)"])
+    ax1.plot(list(range(epochs_number + 1)), 1 - np.array(cosin_sim), '-', color=color)
+    ax1.plot(list(range(epochs_number + 1)), mean_trace_dist, ':', color=color)
+    ax1.set_yscale('log')
+    ax1.legend(["1 - Cosine similarity", "Av. prediction accuracy (trace dist.)"])
     ax1.tick_params(axis='y', labelcolor=color)
     ax2 = ax1.twinx()
     color = 'tab:blue'

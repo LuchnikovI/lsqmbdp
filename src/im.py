@@ -260,6 +260,7 @@ def coupled_dynamics(
             norm = jnp.trace(rho)
             first_matrix = False
             right_state /= norm
+            rho /= norm
         rhos.append(rho)
     return rhos
 

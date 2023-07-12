@@ -113,7 +113,11 @@ def test_coupled_dynamics(
     """Tests coupled dynamics"""
     subkeys = split(subkey, 3)
     influance_matrix1 = random_im(subkeys[0], time_steps, local_choi_rank, sqrt_bond_dim)
+    for i in range(len(influance_matrix1)):
+        influance_matrix1[i] = influance_matrix1[i] / (1.5 + 1j)
     influance_matrix2 = random_im(subkeys[1], time_steps, local_choi_rank, sqrt_bond_dim)
+    for i in range(len(influance_matrix2)):
+        influance_matrix2[i] = influance_matrix2[i] / (1.1 + 1.3j)
     phi = random_unitary_channel(4, subkeys[2])
     phi = phi.reshape((2, 2, 2, 2, 2, 2, 2, 2))
     phi = phi.transpose((0, 2, 1, 3, 4, 6, 5, 7))
