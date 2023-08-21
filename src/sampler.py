@@ -6,7 +6,7 @@ from jax import Array, vmap
 from jax.random import KeyArray, split, categorical
 from jax.lax import dynamic_slice
 import jax.numpy as jnp
-from im import InfluenceMatrix, InfluenceMatrixParameters
+from im import InfluenceMatrix, InfluenceMatrixParameters, params2im, coarse_graining
 from constants import povm
 from sampler_utils import _build_left_states, _push_to_left
 
@@ -17,7 +17,7 @@ Sampler = List[Array]
 def im_log_norm(
         influence_matrix: InfluenceMatrix,
 ) -> Array:
-    """Returns the normalization facto of an influence matrix.
+    """Returns the normalization factor of an influence matrix.
     Args:
         influence_matrix: Influence matrix
     Returns: the normalization factor"""
@@ -94,7 +94,7 @@ def gen_samples(
     return _gen_samples(subkey, sampler)
 
 
-@partial(vmap, in_axes=(None, 0, None))
+'''@partial(vmap, in_axes=(None, 0, None))
 def _log_prob(
         params: InfluenceMatrixParameters,
         samples: Array,
@@ -123,7 +123,7 @@ def _log_prob(
         state /= norm
         log_abs += jnp.log(norm)
     log_abs += jnp.log(jnp.trace(state.reshape(inp_dim, inp_dim)))
-    return log_abs[0].real
+    return log_abs[0].real'''
 
 
 @partial(vmap, in_axes=(None, 0))
@@ -146,21 +146,6 @@ def _log_prob_from_sampler(
     return log_abs[0].real
 
 
-def log_prob(
-        params: InfluenceMatrixParameters,
-        samples: Array,
-        local_choi_dim: int,
-) -> Array:
-    """Computes a logarithmic probability of measurements outcomes.
-    Args:
-        params: parameters of an influence matrix
-        samples: measurement outcomes
-        local_choi_dim: local Choi rank
-    Returns: logarithm of probability"""
-
-    return _log_prob(params,  samples, local_choi_dim).sum(0)
-
-
 def log_prob_from_sampler(
         smpl: Sampler,
         samples: Array,
@@ -173,3 +158,23 @@ def log_prob_from_sampler(
     Returns: logarithm of probability"""
 
     return _log_prob_from_sampler(smpl, samples).sum(0)
+
+
+def log_prob(
+        params: InfluenceMatrixParameters,
+        samples: Array,
+        local_choi_dim: int,
+        merged_kernels_number: int = 1,
+) -> Array:
+    """Computes a logarithmic probability of measurements outcomes.
+    Args:
+        params: parameters of an influence matrix
+        samples: measurement outcomes
+        local_choi_dim: local Choi rank
+        merged_kernels_number: number of coarse-grained kernels
+    Returns: logarithm of probability"""
+
+    influence_matrix = params2im(params, samples.shape[1] * merged_kernels_number, local_choi_dim)
+    influence_matrix = coarse_graining(influence_matrix, merged_kernels_number)
+    smplr = im2sampler(influence_matrix)
+    return log_prob_from_sampler(smplr, samples)

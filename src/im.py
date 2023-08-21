@@ -4,6 +4,7 @@ from typing import List
 import jax.numpy as jnp
 from jax import Array
 from jax.random import KeyArray, split, normal
+from mpa import set_to_forward_canonical
 
 InfluenceMatrix = List[Array]
 
@@ -235,13 +236,14 @@ def coupled_dynamics(
     for ker in influence_matrix2[:-1]:
         left_state = trace_out(left_states2[-1], ker)
         left_states2.append(left_state)
-    right_state = jnp.array([
+    rho_in = jnp.array([
         1, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
-    ]).reshape((1, 4, 4, 1))
-    rhos = [right_state.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((4, 4))]
+    ]).reshape((4, 4))
+    rhos = [rho_in]
+    right_state= rho_in.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((1, 4, 4, 1))
     first_matrix = True
     for ker1, ker2 in zip(reversed(influence_matrix1), reversed(influence_matrix2)):
         left_state1 = left_states1.pop()
@@ -282,3 +284,26 @@ def random_unitary_channel(
     phi = phi.transpose((0, 2, 1, 3))
     phi = phi.reshape((sq_dim * sq_dim, sq_dim * sq_dim))
     return phi
+
+
+def coarse_graining(
+        influence_matrix: InfluenceMatrix,
+        merged_kernels_number: int,
+) -> InfluenceMatrix:
+    """Merges neighboring kernels in order to get coarse-grained in time
+    influence matrix."""
+
+    coarse_grained_influence_matrix = []
+    counter = 0
+    for ker in influence_matrix:
+        if counter == 0:
+            aggregated_kernel = ker
+        else:
+            aggregated_kernel = jnp.tensordot(aggregated_kernel, ker, axes=[[3, 4, 5], [1, 2, 0]])
+        counter += 1
+        if counter == merged_kernels_number:
+            counter = 0
+            coarse_grained_influence_matrix.append(aggregated_kernel)
+    if counter != 0:
+        coarse_grained_influence_matrix.append(aggregated_kernel)
+    return coarse_grained_influence_matrix

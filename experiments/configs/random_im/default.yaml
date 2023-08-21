@@ -8,6 +8,7 @@ generated_im_params:
 dataset_generation_params:
   batch_size: 5000
   batches_number: 160
+  kernels_per_time_step: [1, 2, 5]
 
 training_params:
   sqrt_bond_dim: 7

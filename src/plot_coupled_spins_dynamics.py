@@ -16,6 +16,20 @@ from cli_utils import _hdf2im, _hdf2trained_im
 #    "font.family": "Helvetica"
 #})
 
+#def truncate_choi_rank(ker, rank):
+#    lb, _, _, _, _, rb = ker.shape
+#    sq_lb = int(np.sqrt(lb))
+#    sq_rb = int(np.sqrt(rb))
+#    ker = ker.reshape((sq_lb, sq_lb, 2, 2, 2, 2, sq_rb, sq_rb))
+#    ker = ker.transpose((0, 2, 4, 6, 1, 3, 5, 7)).reshape((sq_lb * sq_rb * 2 * 2, sq_lb * sq_rb * 2 * 2))
+#    u, s, vh = np.linalg.svd(ker)
+#    ker = u[:, :rank] @ (s[:rank, np.newaxis] * vh[:rank])
+#    ker = ker.reshape((sq_lb, 2, 2, sq_rb, sq_lb, 2, 2, sq_rb))
+#    ker = ker.transpose((0, 4, 1, 5, 2, 6, 3, 7))
+#    ker = ker.reshape((lb, 2, 2, 2, 2, rb))
+#    return ker
+
+
 def main():
     parser = ArgumentParser()
     parser.add_argument(
@@ -46,18 +60,20 @@ def main():
     args = parser.parse_args()
     im_exact1 = _hdf2im(args.im_path1)
     im_exact2 = _hdf2im(args.im_path2)
-    im_trained1 = _hdf2trained_im(args.im_path1)
-    im_trained2 = _hdf2trained_im(args.im_path2)
+    #im_trained1 = list(map(lambda x: truncate_choi_rank(x, 5), reversed(_hdf2trained_im(args.im_path1))))
+    #im_trained2 = list(map(lambda x: truncate_choi_rank(x, 5), reversed(_hdf2trained_im(args.im_path2))))
+    im_trained1 = list(reversed(_hdf2trained_im(args.im_path1)))
+    im_trained2 = list(reversed(_hdf2trained_im(args.im_path2)))
     xx = float(args.xx_int)
     yy = float(args.yy_int)
     zz = float(args.zz_int)
     h = xx * np.kron(sigmax, sigmax) + yy * np.kron(sigmay, sigmay) + zz * np.kron(sigmaz, sigmaz)
-    u = expm(1j * 8 * h).reshape((2, 2, 2, 2))
+    u = expm(1j * h).reshape((2, 2, 2, 2))
     phi = np.tensordot(u, u.conj(), axes=0)
     phi = phi.transpose((0, 4, 1, 5, 2, 6, 3, 7)).reshape((4, 4, 4, 4))
     lmbds_gen = [np.linalg.eigvalsh(rho) for rho in coupled_dynamics(im_exact1, im_exact2, phi)]
     lmbds_trained = [np.linalg.eigvalsh(rho) for rho in coupled_dynamics(im_trained1, im_trained2, phi)]
-    plt.title(r"$J_x={}$, $J_y={}$, $J_z={}$".format(8 * xx, 8 * yy, 8 * zz))
+    plt.title(r"$J_x={}$, $J_y={}$, $J_z={}$".format(xx, yy, zz))
     plt.plot([lmbds[0] for lmbds in lmbds_gen], 'b')
     plt.plot([lmbds[1] for lmbds in lmbds_gen], 'r')
     plt.plot([lmbds[2] for lmbds in lmbds_gen], 'k')

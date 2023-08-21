@@ -1,10 +1,11 @@
 from functools import partial
-from typing import Tuple
+from typing import List, Tuple, Dict, Callable
 import jax.numpy as jnp
 import numpy as np
 from jax import Array, pmap, vmap, value_and_grad
 from jax.lax import pmean, psum
 from jax.random import KeyArray, split
+from jax.lax import switch
 import h5py # type: ignore
 from im import InfluenceMatrix, random_unitary_channel, dynamics, InfluenceMatrixParameters
 from sampler import log_prob
@@ -41,19 +42,22 @@ def _im2hdf(
 
 
 def _data2hdf(
-        data: Array,
+        data: Dict[int, Array],
         output_dit: str,
 ):
     with h5py.File(output_dit + "/im_data", "w") as f:
-        f.create_dataset("data", data=data)
+        for n, arr in data.items():
+            f.create_dataset(str(n), data=arr)
 
 
 def _hdf2data(
         path: str,
-):
+) -> Dict[int, np.ndarray]:
+    output: Dict[int, np.ndarray] = {}
     with h5py.File(path + "/im_data") as f:
-        data = np.array(f["data"])
-    return data
+        for n in f.keys():
+            output[int(n)] = np.array(f[n], dtype=np.int8)
+    return output
 
 
 @partial(pmap, in_axes=0, axis_name='i')
@@ -80,14 +84,43 @@ def par_dynamics_prediction(
     return jnp.array(density_matrices), jnp.array(predicted_density_matrices)
 
 
-@partial(pmap, in_axes=(0, 0, None), static_broadcasted_argnums=2)
+'''@partial(pmap, in_axes=(0, 0, None), static_broadcasted_argnums=2)
 @value_and_grad
 def _loss_and_grad(
         params: InfluenceMatrixParameters,
         data: Array,
         local_choi_rank: int,
 ) -> Array:
-    return -log_prob(params, data, local_choi_rank)
+    return -log_prob(params, data, local_choi_rank)'''
+
+def _get_loss_and_grad(
+        kernels_per_time_step: List[str],
+        local_choi_rank: int,
+) -> Callable[[Array, Array, str], Tuple[Array, Array]]:
+    fn_seq = list(map(lambda x: lambda params, data: -log_prob(params, data, local_choi_rank, int(x)),  kernels_per_time_step))
+    name2index = {n: k for n, k in zip(kernels_per_time_step, range(len(kernels_per_time_step)))}
+    @partial(pmap, in_axes=(0, 0, None))
+    @value_and_grad
+    def _loss_and_grad(
+            params: Array,
+            data: Array,
+            index: int,
+    ) -> Array:
+        return switch(
+            index,
+            fn_seq,
+            params,
+            data,
+        )
+    def loss_and_grad(
+            params: Array,
+            data: Array,
+            kernels_per_time_step: str,
+    ):
+        return _loss_and_grad(
+            params, data, name2index[kernels_per_time_step]
+        )
+    return loss_and_grad
 
 
 @partial(pmap, axis_name='i')

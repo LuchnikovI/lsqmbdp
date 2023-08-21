@@ -2,20 +2,21 @@ seed: 42
 
 generated_im_params:
   sqrt_bond_dim: 3
-  time_steps: 10
+  time_steps: 50
   local_choi_rank: 1
 
 dataset_generation_params:
-  batch_size: 100
+  batch_size: 1000
   batches_number: 100
+  kernels_per_time_step: [1, 2, 5]
 
 training_params:
   sqrt_bond_dim: 4
-  local_choi_rank: 2
-  batch_size: 100
+  local_choi_rank: 10
+  batch_size: 1000
   epochs_number: 20
   learning_rate_in: 0.25
   learning_rate_final: 0.01
-  decay_law: "linear"
-  decay_epochs_number: 10
-  test_trajectories_number: 100
+  decay_law: "exponential"
+  decay_epochs_number: 18
+  test_trajectories_number: 1000
