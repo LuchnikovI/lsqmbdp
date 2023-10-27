@@ -29,7 +29,7 @@ from cli_utils import (
     par_trace_dist,
     par_dynamics_prediction,
     _av_grad,
-    _loss_and_grad,
+    _get_loss_and_grad,
     _learning_rate_update,
 )
 
@@ -53,18 +53,25 @@ def main(cfg: DictConfig):
     local_devices_number = local_device_count()
     data_tail_shape = (-1, local_devices_number, batch_size)
     main_cpu = devices("cpu")[0]
+    kernels_per_time_step = conf.dataset_generation_params.kernels_per_time_step
+    loss_and_grad = _get_loss_and_grad(kernels_per_time_step, local_choi_rank)
     # ---------------------------------------------------------------------------------
     unknown_influence_matrix = _hdf2im(output_dir)
     set_to_forward_canonical(unknown_influence_matrix)
-    time_steps = len(unknown_influence_matrix)
-    data = device_put(_hdf2data(output_dir), main_cpu)
-    data = data.reshape((*data_tail_shape, 2, time_steps))
+    data = _hdf2data(output_dir)
+    for k in data:
+        samples = device_put(data[k], main_cpu)
+        time_steps = samples.shape[-1]
+        if int(k) == 1:
+            total_time_steps = time_steps
+        data[k] = samples.reshape((*data_tail_shape, time_steps))
+        batches_number_per_coarse_graining = data[k].shape[0]
     print(yaml.dump(
         {
             "machine_dependant_training_params":
                 {
                     "local_devices_number": local_devices_number,
-                    "batches_number": data.shape[0],
+                    "batches_number_per_coarse_graining": batches_number_per_coarse_graining,
                     "test_trajectories_number": test_trajectories_number * local_devices_number,
                 }
         },
@@ -87,10 +94,10 @@ def main(cfg: DictConfig):
     lr = learning_rate_in
     opt = RAdam(stman, lr)
     opt_state = opt.init(params)
-    best_loss_val = jnp.finfo(jnp.float32).max
+    best_loss_val = jnp.finfo(jnp.float64).max
 
     # evaluates im before training
-    found_influence_matrix = params2im([ker[0] for ker in params], time_steps, local_choi_rank)
+    found_influence_matrix = params2im([ker[0] for ker in params], total_time_steps, local_choi_rank)
     set_to_forward_canonical(found_influence_matrix)
     log_fidelity_half, _ = mpa_log_dot(unknown_influence_matrix, found_influence_matrix)
     fidelity = jnp.exp(2 * log_fidelity_half)
@@ -111,14 +118,15 @@ def main(cfg: DictConfig):
     for i in range(1, epochs_number + 1):
         opt = RAdam(stman, lr)
         av_loss_val = 0.
-        for data_slice in data:
-            loss_val, grads = _loss_and_grad(params, data_slice, local_choi_rank)
-            grads = _av_grad(grads)
-            params, opt_state = opt.update(grads, opt_state, params)
-            av_loss_val += loss_val.sum()
+        for bn in range(batches_number_per_coarse_graining):
+            for n in kernels_per_time_step:
+                loss_val, grads = loss_and_grad(params, data[n][bn], n)
+                grads = _av_grad(grads)
+                params, opt_state = opt.update(grads, opt_state, params)
+                av_loss_val += loss_val.sum()
         key, subkey = split(key)
-        data = permutation(subkey, data.reshape((-1, 2, time_steps)), False).reshape((*data_tail_shape, 2, time_steps))
-        found_influence_matrix = params2im([ker[0] for ker in params], time_steps, local_choi_rank)
+        data = {k: permutation(subkey, d.reshape((-1, d.shape[-1])), False).reshape((*data_tail_shape, d.shape[-1])) for k, d in data.items()}
+        found_influence_matrix = params2im([ker[0] for ker in params], total_time_steps, local_choi_rank)
         density_matrices = par_dynamics_prediction(unknown_influence_matrix, found_influence_matrix, subkeys)
         hf_trained = h5py.File(output_dir + "/im_trained", 'a')
         if av_loss_val < best_loss_val:

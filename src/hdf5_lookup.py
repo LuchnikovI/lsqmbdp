@@ -1,4 +1,4 @@
-#!/usr/bin/python3.10
+#!/usr/bin/python
 
 # pylint: skip-file
 
@@ -18,7 +18,7 @@ def main() -> None:
         for key in f.keys():
             with h5py.File(h5_dir + "/experiments/ims/" + key, 'w') as subf:
                 for name in f[key].keys():
-                    subf.create_dataset(name=name, data=np.array(f[key][name]))
+                    subf.create_dataset(name=name, data=np.array(f[key][name]).transpose((0, 2, 1)))
 
 if __name__ == "__main__":
     main()

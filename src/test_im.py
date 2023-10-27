@@ -89,7 +89,7 @@ def test_dynamics(
     subkeys = split(subkeys[-1], time_steps)
     phis = [random_unitary_channel(2, subkey) for subkey in subkeys]
     phi = phis[-1]
-    dens_true = jnp.array([1, 0, 0, 0], dtype=jnp.complex64)
+    dens_true = jnp.array([1, 0, 0, 0], dtype=jnp.complex128)
     swap_and_phi = swap_and_phi_im(time_steps, phi)
     for i, dens in enumerate(dynamics(swap_and_phi, phis)[1:]):
         if i % 2 == 1:
@@ -113,12 +113,22 @@ def test_coupled_dynamics(
     """Tests coupled dynamics"""
     subkeys = split(subkey, 3)
     influance_matrix1 = random_im(subkeys[0], time_steps, local_choi_rank, sqrt_bond_dim)
+    for i in range(len(influance_matrix1)):
+        influance_matrix1[i] = influance_matrix1[i] / (1.5 + 1j)
     influance_matrix2 = random_im(subkeys[1], time_steps, local_choi_rank, sqrt_bond_dim)
+    for i in range(len(influance_matrix2)):
+        influance_matrix2[i] = influance_matrix2[i] / (1.1 + 1.3j)
     phi = random_unitary_channel(4, subkeys[2])
     phi = phi.reshape((2, 2, 2, 2, 2, 2, 2, 2))
     phi = phi.transpose((0, 2, 1, 3, 4, 6, 5, 7))
     phi = phi.reshape((4, 4, 4, 4))
-    for dens in coupled_dynamics(influance_matrix1, influance_matrix2, phi):
+    rho_in = jnp.array([
+        0.25, 0, 0, 0,
+        0, 0.25, 0, 0,
+        0, 0, 0.25, 0,
+        0, 0, 0, 0.25,
+    ]).reshape((4, 4))
+    for dens in coupled_dynamics(influance_matrix1, influance_matrix2, phi, rho_in):
         assert (jnp.abs(dens - dens.conj().T) < ACC).all()
         assert (jnp.linalg.eigvalsh(dens) > -ACC).all()
         assert jnp.abs(jnp.trace(dens) - 1.) < ACC

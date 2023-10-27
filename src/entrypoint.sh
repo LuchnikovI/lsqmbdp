@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+export JAX_ENABLE_X64=True
+
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 get_help() {
@@ -14,8 +16,6 @@ Usage:
   train_im:                    trains IM on saved samples (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
   get_config:                  prints experiment config (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
   preproc:                     preprocess an externel influence matrix and save it in the output dir (it is a hydra cli app "https://hydra.cc/docs/tutorials/basic/your_first_app/simple_cli/");
-  plot_logs:                   make a plot from logs (use --help option to get usage)
-  plot_coupled_spins_dynamics: make a plot of coupled spins dynamics (use --help option to get usage)
 EOF
 }
 
@@ -48,14 +48,6 @@ case $1 in
   get_config)
         shift
         "${script_dir}/get_config.py" "$@"
-    ;;
-  plot_logs)
-        shift
-        "${script_dir}/plot_logs.py" "$@"
-    ;;
-  plot_coupled_spins_dynamics)
-        shift
-        "${script_dir}/plot_coupled_spins_dynamics.py" "$@"
     ;;
   preproc)
         shift

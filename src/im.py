@@ -1,9 +1,10 @@
 """Influence matrix"""
 
-from typing import List
+from typing import List, Tuple
 import jax.numpy as jnp
 from jax import Array
 from jax.random import KeyArray, split, normal
+from mpa import set_to_forward_canonical
 
 InfluenceMatrix = List[Array]
 
@@ -140,7 +141,7 @@ def id_im(time_steps: int):
     Returns: the identity influence matrix
     """
 
-    kers = time_steps * [jnp.eye(4, dtype=jnp.complex64).reshape((1, 2, 2, 2, 2, 1))]
+    kers = time_steps * [jnp.eye(4, dtype=jnp.complex128).reshape((1, 2, 2, 2, 2, 1))]
     return kers
 
 
@@ -169,7 +170,7 @@ def im2phi(
         influence_matrix: influence matrix
     Returns: quantum channel"""
 
-    phi = jnp.ones((1, 1, 1, 1, 1), dtype=jnp.complex64)
+    phi = jnp.ones((1, 1, 1, 1, 1), dtype=jnp.complex128)
     for ker in influence_matrix:
         phi = jnp.tensordot(phi, ker, axes=1)
         phi = phi.transpose((0, 4, 1, 5, 2, 6, 3, 7, 8))
@@ -195,7 +196,7 @@ def dynamics(
         left_state = trace_out(left_states[-1], ker)
         left_state /= jnp.linalg.norm(left_state)
         left_states.append(left_state)
-    right_state = jnp.array([[1, 0, 0, 0]], dtype=jnp.complex64)
+    right_state = jnp.array([[1, 0, 0, 0]], dtype=jnp.complex128)
     rhos = [right_state.reshape((2, 2))]
     for ker, phi in zip(reversed(influence_matrix), reversed(phis)):
         left_state = left_states.pop()
@@ -215,6 +216,7 @@ def coupled_dynamics(
         influence_matrix1: InfluenceMatrix,
         influence_matrix2: InfluenceMatrix,
         int_gate: Array,
+        rho_in: Array,
 ) -> List[Array]:
     """Computes dynamics of two coupled spins where each one is additionally
     coupled with its own environment.
@@ -222,28 +224,24 @@ def coupled_dynamics(
         influence_matrix1: influence matrix coupled with the first spin
         influence_matrix2: influence matrix coupled with the second spin
         int_gate: gate describing interaction between spins
+        rho_in: initial density matrix of two spins
     Returns:
         list of density matrices of these two spins evolving in time"""
 
     def trace_out(left: Array, ker: Array) -> Array:
-            return jnp.tensordot(left, jnp.einsum("qiijjp->qp", ker), axes=1)
+            return jnp.tensordot(left, jnp.einsum("qiijjp->qp", ker), axes=1) / 2
     left_states1 = [jnp.ones((1,))]
     for ker in influence_matrix1[:-1]:
         left_state = trace_out(left_states1[-1], ker)
-        left_state /= jnp.linalg.norm(left_state)
         left_states1.append(left_state)
     left_states2 = [jnp.ones((1,))]
     for ker in influence_matrix2[:-1]:
         left_state = trace_out(left_states2[-1], ker)
-        left_state /= jnp.linalg.norm(left_state)
         left_states2.append(left_state)
-    right_state = jnp.array([
-        1, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-    ]).reshape((1, 4, 4, 1))
-    rhos = [right_state.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((4, 4))]
+    rho_in = rho_in.astype(jnp.complex128).reshape((4, 4))
+    rhos = [rho_in]
+    right_state= rho_in.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((1, 4, 4, 1))
+    first_matrix = True
     for ker1, ker2 in zip(reversed(influence_matrix1), reversed(influence_matrix2)):
         left_state1 = left_states1.pop()
         left_state2 = left_states2.pop()
@@ -256,12 +254,68 @@ def coupled_dynamics(
         right_state = jnp.einsum("lkqp,ijqp->ijkl", ker2, right_state)
         rho = jnp.einsum("q,p,qijp->ij", left_state1, left_state2, right_state)
         rho = rho.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((4, 4))
-        norm = jnp.trace(rho)
-        rho /= norm
-        right_state /= norm
+        # This is necessary to correct a normalization of im if it is incorrect
+        if first_matrix:
+            norm = jnp.trace(rho)
+            first_matrix = False
+            right_state /= norm
+            rho /= norm
         rhos.append(rho)
     return rhos
 
+def current_dynamics(
+        influence_matrix1: InfluenceMatrix,
+        influence_matrix2: InfluenceMatrix,
+        int_gates: List[Array],
+        rho_in: Array,
+) -> List[Array]:
+    """Computes dynamics of the current through the interfaces with baths.
+    Args:
+        influence_matrix1: influence matrix coupled with the first spin
+        influence_matrix2: influence matrix coupled with the second spin
+        int_gates: list of gates describing interaction between spins
+        rho_in: initial density matrix of two spins
+    Returns:
+        current"""
+
+    assert len(influence_matrix1) == len(influence_matrix2)
+    assert len(influence_matrix1) == len(int_gates)
+    def trace_out(left: Array, ker: Array) -> Array:
+            return jnp.tensordot(left, jnp.einsum("qiijjp->qp", ker), axes=1) / 2
+    left_states1 = [jnp.ones((1,))]
+    for ker in influence_matrix1[:-1]:
+        left_state = trace_out(left_states1[-1], ker)
+        left_states1.append(left_state)
+    left_states2 = [jnp.ones((1,))]
+    for ker in influence_matrix2[:-1]:
+        left_state = trace_out(left_states2[-1], ker)
+        left_states2.append(left_state)
+    rho_in = rho_in.reshape((4, 4))
+    right_state= rho_in.astype(jnp.complex128).reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((1, 4, 4, 1))
+    first_matrix = True
+    current = []
+    for ker1, ker2, int_gate in zip(reversed(influence_matrix1), reversed(influence_matrix2), int_gates):
+        left_bond1, _, _, _, _, right_bond1 = ker1.shape
+        ker1 = ker1.reshape((left_bond1, 4, 4, right_bond1))
+        left_bond2, _, _, _, _, right_bond2 = ker2.shape
+        ker2 = ker2.reshape((left_bond2, 4, 4, right_bond2))
+        right_state = jnp.einsum("ijpq,qpkl->ijkl", ker1, right_state)
+        right_state = jnp.einsum("lkqp,ijqp->ijkl", ker2, right_state)
+        left_state1 = left_states1.pop()
+        left_state2 = left_states2.pop()
+        rho = jnp.einsum("q,p,qijp->ij", left_state1, left_state2, right_state).reshape((2, 2, 2, 2))
+        # This is necessary to correct a normalization of im if it is incorrect
+        if first_matrix:
+            norm = jnp.trace(rho.transpose((0, 2, 1, 3)).reshape((4, 4)))
+            first_matrix = False
+            right_state /= norm
+            rho /= norm
+        charge_before_int_gate = jnp.einsum("ijkk->ij", rho)[0, 0]
+        right_state = jnp.einsum("jkqp,iqpl->ijkl", int_gate, right_state)
+        rho = jnp.einsum("q,p,qijp->ij", left_state1, left_state2, right_state).reshape((2, 2, 2, 2))
+        charge_after_int_gate = jnp.einsum("ijkk->ij", rho)[0, 0]
+        current.append(charge_after_int_gate - charge_before_int_gate)
+    return current
 
 def random_unitary_channel(
         sq_dim: int,
@@ -280,3 +334,26 @@ def random_unitary_channel(
     phi = phi.transpose((0, 2, 1, 3))
     phi = phi.reshape((sq_dim * sq_dim, sq_dim * sq_dim))
     return phi
+
+
+def coarse_graining(
+        influence_matrix: InfluenceMatrix,
+        merged_kernels_number: int,
+) -> InfluenceMatrix:
+    """Merges neighboring kernels in order to get coarse-grained in time
+    influence matrix."""
+
+    coarse_grained_influence_matrix = []
+    counter = 0
+    for ker in influence_matrix:
+        if counter == 0:
+            aggregated_kernel = ker
+        else:
+            aggregated_kernel = jnp.tensordot(aggregated_kernel, ker, axes=[[3, 4, 5], [1, 2, 0]])
+        counter += 1
+        if counter == merged_kernels_number:
+            counter = 0
+            coarse_grained_influence_matrix.append(aggregated_kernel)
+    if counter != 0:
+        coarse_grained_influence_matrix.append(aggregated_kernel)
+    return coarse_grained_influence_matrix

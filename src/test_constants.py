@@ -1,15 +1,12 @@
 "Tests properties of constants"
 
 import jax.numpy as jnp
-from constants import projs
+from constants import inv_povm, povm
 
 ACC = 1e-5
 
-def test_projs():
-    """Tests properties of the projectors."""
-    for proj in projs.transpose((1, 0, 2, 3)):
-        assert (jnp.abs(proj[0] - proj[0].conj().T) < ACC).all()
-        assert (jnp.abs(proj[1] - proj[1].conj().T) < ACC).all()
-        assert (jnp.abs(proj[0] @ proj[0] - proj[0]) < ACC).all()
-        assert (jnp.abs(proj[1] @ proj[1] - proj[1]) < ACC).all()
-        assert (jnp.abs(proj[0] @ proj[1]) < ACC).all()
+def test_povm():
+    """Tests properties of the tetrahedral povm."""
+
+    povm_dot = jnp.tensordot(povm, inv_povm, axes=2)
+    assert jnp.linalg.norm(povm_dot - jnp.eye(4)) < ACC
