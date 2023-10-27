@@ -1,6 +1,6 @@
 """Influence matrix"""
 
-from typing import List
+from typing import List, Tuple
 import jax.numpy as jnp
 from jax import Array
 from jax.random import KeyArray, split, normal
@@ -216,6 +216,7 @@ def coupled_dynamics(
         influence_matrix1: InfluenceMatrix,
         influence_matrix2: InfluenceMatrix,
         int_gate: Array,
+        rho_in: Array,
 ) -> List[Array]:
     """Computes dynamics of two coupled spins where each one is additionally
     coupled with its own environment.
@@ -223,6 +224,7 @@ def coupled_dynamics(
         influence_matrix1: influence matrix coupled with the first spin
         influence_matrix2: influence matrix coupled with the second spin
         int_gate: gate describing interaction between spins
+        rho_in: initial density matrix of two spins
     Returns:
         list of density matrices of these two spins evolving in time"""
 
@@ -236,12 +238,7 @@ def coupled_dynamics(
     for ker in influence_matrix2[:-1]:
         left_state = trace_out(left_states2[-1], ker)
         left_states2.append(left_state)
-    rho_in = jnp.array([
-        1, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-    ]).reshape((4, 4))
+    rho_in = rho_in.astype(jnp.complex128).reshape((4, 4))
     rhos = [rho_in]
     right_state= rho_in.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((1, 4, 4, 1))
     first_matrix = True
@@ -266,6 +263,59 @@ def coupled_dynamics(
         rhos.append(rho)
     return rhos
 
+def current_dynamics(
+        influence_matrix1: InfluenceMatrix,
+        influence_matrix2: InfluenceMatrix,
+        int_gates: List[Array],
+        rho_in: Array,
+) -> List[Array]:
+    """Computes dynamics of the current through the interfaces with baths.
+    Args:
+        influence_matrix1: influence matrix coupled with the first spin
+        influence_matrix2: influence matrix coupled with the second spin
+        int_gates: list of gates describing interaction between spins
+        rho_in: initial density matrix of two spins
+    Returns:
+        current"""
+
+    assert len(influence_matrix1) == len(influence_matrix2)
+    assert len(influence_matrix1) == len(int_gates)
+    def trace_out(left: Array, ker: Array) -> Array:
+            return jnp.tensordot(left, jnp.einsum("qiijjp->qp", ker), axes=1) / 2
+    left_states1 = [jnp.ones((1,))]
+    for ker in influence_matrix1[:-1]:
+        left_state = trace_out(left_states1[-1], ker)
+        left_states1.append(left_state)
+    left_states2 = [jnp.ones((1,))]
+    for ker in influence_matrix2[:-1]:
+        left_state = trace_out(left_states2[-1], ker)
+        left_states2.append(left_state)
+    rho_in = rho_in.reshape((4, 4))
+    right_state= rho_in.astype(jnp.complex128).reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((1, 4, 4, 1))
+    first_matrix = True
+    current = []
+    for ker1, ker2, int_gate in zip(reversed(influence_matrix1), reversed(influence_matrix2), int_gates):
+        left_bond1, _, _, _, _, right_bond1 = ker1.shape
+        ker1 = ker1.reshape((left_bond1, 4, 4, right_bond1))
+        left_bond2, _, _, _, _, right_bond2 = ker2.shape
+        ker2 = ker2.reshape((left_bond2, 4, 4, right_bond2))
+        right_state = jnp.einsum("ijpq,qpkl->ijkl", ker1, right_state)
+        right_state = jnp.einsum("lkqp,ijqp->ijkl", ker2, right_state)
+        left_state1 = left_states1.pop()
+        left_state2 = left_states2.pop()
+        rho = jnp.einsum("q,p,qijp->ij", left_state1, left_state2, right_state).reshape((2, 2, 2, 2))
+        # This is necessary to correct a normalization of im if it is incorrect
+        if first_matrix:
+            norm = jnp.trace(rho.transpose((0, 2, 1, 3)).reshape((4, 4)))
+            first_matrix = False
+            right_state /= norm
+            rho /= norm
+        charge_before_int_gate = jnp.einsum("ijkk->ij", rho)[0, 0]
+        right_state = jnp.einsum("jkqp,iqpl->ijkl", int_gate, right_state)
+        rho = jnp.einsum("q,p,qijp->ij", left_state1, left_state2, right_state).reshape((2, 2, 2, 2))
+        charge_after_int_gate = jnp.einsum("ijkk->ij", rho)[0, 0]
+        current.append(charge_after_int_gate - charge_before_int_gate)
+    return current
 
 def random_unitary_channel(
         sq_dim: int,

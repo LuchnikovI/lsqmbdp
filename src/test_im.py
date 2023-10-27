@@ -122,7 +122,13 @@ def test_coupled_dynamics(
     phi = phi.reshape((2, 2, 2, 2, 2, 2, 2, 2))
     phi = phi.transpose((0, 2, 1, 3, 4, 6, 5, 7))
     phi = phi.reshape((4, 4, 4, 4))
-    for dens in coupled_dynamics(influance_matrix1, influance_matrix2, phi):
+    rho_in = jnp.array([
+        0.25, 0, 0, 0,
+        0, 0.25, 0, 0,
+        0, 0, 0.25, 0,
+        0, 0, 0, 0.25,
+    ]).reshape((4, 4))
+    for dens in coupled_dynamics(influance_matrix1, influance_matrix2, phi, rho_in):
         assert (jnp.abs(dens - dens.conj().T) < ACC).all()
         assert (jnp.linalg.eigvalsh(dens) > -ACC).all()
         assert jnp.abs(jnp.trace(dens) - 1.) < ACC

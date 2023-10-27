@@ -3,6 +3,10 @@
 /src/__pycache__
 /src/hdf5_converter.py
 /.mypy_cache
+/experiments/output/physical_ims
+/experiments/output/random_ims
+/experiments/ims
+*.tar
 unsorted
 *.sif
 im_*

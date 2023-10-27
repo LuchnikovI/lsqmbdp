@@ -31,8 +31,6 @@ From: ${base_image}
     chmod +x "$(dirname ${script_dir})/src/gen_samples.py"
     chmod +x "$(dirname ${script_dir})/src/random_im.py"
     chmod +x "$(dirname ${script_dir})/src/train_im.py"
-    chmod +x "$(dirname ${script_dir})/src/plot_logs.py"
-    chmod +x "$(dirname ${script_dir})/src/plot_coupled_spins_dynamics.py"
     chmod +x "$(dirname ${script_dir})/src/preproc.py"
 
 %post
