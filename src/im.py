@@ -1,6 +1,6 @@
 """Influence matrix"""
 
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import jax.numpy as jnp
 from jax import Array
 from jax.random import KeyArray, split, normal
@@ -215,7 +215,7 @@ def dynamics(
 def coupled_dynamics(
         influence_matrix1: InfluenceMatrix,
         influence_matrix2: InfluenceMatrix,
-        int_gate: Array,
+        int_gates: Union[List[Array], Array],
         rho_in: Array,
 ) -> List[Array]:
     """Computes dynamics of two coupled spins where each one is additionally
@@ -223,7 +223,7 @@ def coupled_dynamics(
     Args:
         influence_matrix1: influence matrix coupled with the first spin
         influence_matrix2: influence matrix coupled with the second spin
-        int_gate: gate describing interaction between spins
+        int_gates: gates describing interaction between spins
         rho_in: initial density matrix of two spins
     Returns:
         list of density matrices of these two spins evolving in time"""
@@ -242,16 +242,20 @@ def coupled_dynamics(
     rhos = [rho_in]
     right_state= rho_in.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((1, 4, 4, 1))
     first_matrix = True
-    for ker1, ker2 in zip(reversed(influence_matrix1), reversed(influence_matrix2)):
+    if not isinstance(int_gates, List):
+        gates_list = len(influence_matrix1) * [int_gates]
+    else:
+        gates_list = int_gates
+    for ker1, ker2, int_gate in zip(reversed(influence_matrix1), reversed(influence_matrix2), gates_list):
         left_state1 = left_states1.pop()
         left_state2 = left_states2.pop()
         left_bond1, _, _, _, _, right_bond1 = ker1.shape
         ker1 = ker1.reshape((left_bond1, 4, 4, right_bond1))
         left_bond2, _, _, _, _, right_bond2 = ker2.shape
         ker2 = ker2.reshape((left_bond2, 4, 4, right_bond2))
-        right_state = jnp.einsum("jkqp,iqpl->ijkl", int_gate, right_state)
         right_state = jnp.einsum("ijpq,qpkl->ijkl", ker1, right_state)
         right_state = jnp.einsum("lkqp,ijqp->ijkl", ker2, right_state)
+        right_state = jnp.einsum("jkqp,iqpl->ijkl", int_gate, right_state)
         rho = jnp.einsum("q,p,qijp->ij", left_state1, left_state2, right_state)
         rho = rho.reshape((2, 2, 2, 2)).transpose((0, 2, 1, 3)).reshape((4, 4))
         # This is necessary to correct a normalization of im if it is incorrect
